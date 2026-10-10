@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "designs",
+      "runtimeExecutable": "/opt/homebrew/bin/uv",
+      "runtimeArgs": ["run", "--no-project", "python", "tools/serve.py"],
+      "port": 4173,
+      "autoPort": true
+    }
+  ]
+}

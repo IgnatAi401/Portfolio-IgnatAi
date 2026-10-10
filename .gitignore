@@ -1,0 +1,25 @@
+# 图片文件（不区分大小写，如 .JPG 也会被忽略）
+*.[jJ][pP][gG]
+*.[jJ][pP][eE][gG]
+*.[pP][nN][gG]
+*.[wW][eE][bB][pP]
+*.[aA][vV][iI][fF]
+*.[hH][eE][iI][cC]
+*.[hH][eE][iI][fF]
+*.[gG][iI][fF]
+*.[tT][iI][fF]
+*.[tT][iI][fF][fF]
+*.[bB][mM][pP]
+
+# 相机 RAW 原片及附属文件
+*.[dD][nN][gG]
+*.[aA][rR][wW]
+*.[cC][rR]2
+*.[cC][rR]3
+*.[nN][eE][fF]
+*.[rR][aA][fF]
+*.[oO][rR][fF]
+*.[xX][mM][pP]
+
+# macOS 系统文件
+.DS_Store
