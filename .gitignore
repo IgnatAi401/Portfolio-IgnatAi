@@ -3,6 +3,7 @@
 /*
 !/.gitignore
 !/.gitattributes
+!/README.md
 !/designs/
 
 # 以下不上传：
