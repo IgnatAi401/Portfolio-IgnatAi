@@ -2,7 +2,7 @@
 
 This is the source of **Ignat's personal photography portfolio**: a static site that arranges photographs from travels on an engraved-style world map, a contact-sheet grid and a viewfinder-style full-screen viewer.
 
-**Live site:** <https://photos.ignat.ai>
+**Live site:** <https://travel.ignat.ai>
 **Contact:** <https://me.ignat.ai>
 
 ## Repository contents
