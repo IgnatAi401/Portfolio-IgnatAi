@@ -46,10 +46,11 @@
 <div class="loupe" id="loupe" aria-hidden="true"><div class="inner" id="loupeInner"></div></div>
 
 <!-- 取景器 -->
-<div class="vf" id="vf" role="dialog" aria-modal="true" aria-label="全屏看图">
+<div class="vf" id="vf" role="dialog" aria-modal="true" aria-label="全屏看图" aria-hidden="true">
   <div class="bg" id="vfBg"></div>
-  <img class="photo" id="vfImg" alt="">
-  <div class="shutter" id="vfShutter"></div>
+  <img class="photo" id="vfPreview" alt="" hidden>
+  <img class="photo" id="vfImg" alt="" hidden>
+  <div class="vstatus" id="vfStatus" role="status"><span id="vfLoadText"></span><button id="vfRetry" hidden>重新加载</button></div>
   <div class="frm" aria-hidden="true"><i></i><i></i><i></i><i></i><div class="af" id="vfAf"></div></div>
   <div class="vtop"><span><span id="vfRoll"></span><span class="filt" id="vfFilt"></span></span><button class="vclose" id="vfClose">关闭（Esc）</button></div>
   <button class="zone prev" id="vfPrev" aria-label="上一张"></button>

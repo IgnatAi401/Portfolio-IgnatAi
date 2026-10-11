@@ -255,7 +255,7 @@
     const same = state.country === name && !state.city;
     state.country = same ? null : name; state.city = null;
     applyFilter();
-    if (jump && !same) $("sheet").scrollIntoView({ block: "start" });
+    if (jump && !same) $("sheet").scrollIntoView({ block: "start", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
   }
 
   $("toggle").addEventListener("click", e => {
@@ -288,7 +288,7 @@
       <div class="frame${p.review || isLit(p) ? "" : " off"}" data-id="${esc(p.id)}">
         <div class="fedge t"><span>${md}</span><span>▸ ${n}</span><span>${n}A</span></div>
         <button class="win ${p.h > p.w ? "rot" : ""}" data-id="${esc(p.id)}" aria-label="全屏看：${esc(p.title || "未命名")}">
-          <img src="${esc(thumbSrc(p))}" alt="${esc(p.title)}" loading="lazy" decoding="async" draggable="false">
+          <img src="${esc(thumbSrc(p))}" alt="${esc(p.title)}" width="${p.w}" height="${p.h}" loading="lazy" decoding="async" draggable="false">
         </button>
         ${p.pick ? `<svg class="mark" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="${greaseBox(n)}" vector-effect="non-scaling-stroke"/></svg>` : ""}
         <div class="fedge b"><span>f/${dash(p.f)}</span><span>${dash(p.s)}</span><span>${has(p.mm) ? p.mm + "MM" : "—"}</span><span>ISO${dash(p.iso)}</span></div>
@@ -337,12 +337,13 @@
 
   // 放大镜
   const loupe = $("loupe"), inner = $("loupeInner"), Z = 2.6, R = 110;
-  let lensOn = null, lensRect = null, lensPointer = null, lensFrame = null;
+  let lensOn = null, lensRect = null, lensPointer = null, lensFrame = null, lensPausedUntil = 0;
   const loupeEnabled = matchMedia("(min-width: 761px)");
   function hideLoupe() {
     if (lensFrame !== null) cancelAnimationFrame(lensFrame);
     lensFrame = lensPointer = lensOn = lensRect = null;
     loupe.classList.remove("on");
+    inner.replaceChildren();
   }
   function paintLoupe() {
     lensFrame = null;
@@ -361,12 +362,15 @@
   }
   $("sheet").addEventListener("pointermove", e => {
     const win = e.target.closest(".win");
-    if (!win || e.pointerType !== "mouse" || !loupeEnabled.matches) { hideLoupe(); return; }
+    if (!win || e.pointerType !== "mouse" || !loupeEnabled.matches || performance.now() < lensPausedUntil) { hideLoupe(); return; }
     lensPointer = { win, x: e.clientX, y: e.clientY };
     if (lensFrame === null) lensFrame = requestAnimationFrame(paintLoupe);
   });
   $("sheet").addEventListener("pointerleave", hideLoupe);
-  addEventListener("scroll", () => { lensRect = null; }, { passive: true });
+  addEventListener("scroll", () => {
+    lensPausedUntil = performance.now() + 150;
+    if (lensOn || lensFrame !== null) hideLoupe();
+  }, { passive: true });
   addEventListener("resize", hideLoupe);
 
   /* ———————— 取景器 ———————— */
@@ -396,22 +400,90 @@
     } else $("vfMini").hidden = true;
   }
 
-  let viewerTimer = null, focusTimer = null;
-  function vfShow(p, animate = true) {
-    clearTimeout(viewerTimer); clearTimeout(focusTimer);
+  let viewerRequest = 0, viewerLoadTimer = null, viewerImages = [];
+  function cancelViewerLoad() {
+    viewerRequest++;
+    clearTimeout(viewerLoadTimer);
+    viewerLoadTimer = null;
+    // 中断已过期的下载/解码，不把离屏大图一直留在内存里。
+    viewerImages.forEach(img => { if (!img.isConnected) img.removeAttribute("src"); });
+    viewerImages = [];
+  }
+  function clearViewerImages() {
+    for (const id of ["vfPreview", "vfImg"]) {
+      const img = $(id);
+      img.hidden = true;
+      img.removeAttribute("src");
+      img.alt = "";
+    }
+    $("vfBg").style.backgroundImage = "";
+  }
+  function viewerStatus(text, retry = false) {
+    $("vfStatus").hidden = !text;
+    $("vfLoadText").textContent = text;
+    $("vfRetry").hidden = !retry;
+  }
+  function mountViewerImage(img, id, p) {
+    img.id = id;
+    img.className = "photo";
+    img.classList.toggle("cover", cover);
+    img.alt = [p.title, p.city, p.spot].filter(Boolean).join("，");
+    img.width = p.w; img.height = p.h;
+    img.draggable = false;
+    // 放进来的就是已经解码的节点，避免再次改 src 时出现旧图或空白帧。
+    $(id).replaceWith(img);
+  }
+  function vfShow(p) {
+    if (!p) return;
+    cancelViewerLoad();
     cur = p;
-    const apply = () => {
-      $("vfImg").src = fullSrc(p); $("vfImg").alt = [p.title, p.city, p.spot].filter(Boolean).join("，");
-      $("vfImg").classList.toggle("cover", cover);
-      $("vfBg").style.backgroundImage = `url("${thumbSrc(p)}")`;
-      paintViewer(p);
-      syncEditor();
-    };
-    if (!animate) return apply();
-    const sh = $("vfShutter"); sh.classList.remove("fire"); void sh.offsetWidth; sh.classList.add("fire");
+    clearViewerImages();
+    paintViewer(p);
+    syncEditor();
     $("vfAf").classList.remove("lock");
-    viewerTimer = setTimeout(apply, 50);
-    focusTimer = setTimeout(() => $("vfAf").classList.add("lock"), 380);
+    vf.setAttribute("aria-busy", "true");
+    viewerStatus("正在加载照片……");
+
+    const request = viewerRequest;
+    const current = () => request === viewerRequest && vf.classList.contains("open");
+    const preview = new Image(), full = new Image();
+    preview.decoding = full.decoding = "async";
+    full.fetchPriority = "high";
+    viewerImages = [preview, full];
+    let fullSettled = false;
+    const failed = () => {
+      if (!current() || fullSettled) return;
+      fullSettled = true;
+      clearTimeout(viewerLoadTimer);
+      viewerLoadTimer = null;
+      full.removeAttribute("src");
+      vf.setAttribute("aria-busy", "false");
+      viewerStatus($("vfPreview").hidden ? "照片加载失败" : "大图加载失败，暂时显示预览", true);
+    };
+    viewerLoadTimer = setTimeout(failed, 20000);
+
+    // 当前照片的小图先垫底；大图和小图使用同一个固定取景区域。
+    preview.src = thumbSrc(p);
+    preview.decode().then(() => {
+      if (!current() || (fullSettled && !$("vfImg").hidden)) return;
+      mountViewerImage(preview, "vfPreview", p);
+      $("vfBg").style.backgroundImage = `url("${thumbSrc(p)}")`;
+      viewerStatus(fullSettled ? "大图加载失败，暂时显示预览" : "正在加载大图……", fullSettled);
+    }).catch(() => {});
+
+    full.src = fullSrc(p);
+    full.decode().then(() => {
+      if (!current() || fullSettled) return;
+      fullSettled = true;
+      clearTimeout(viewerLoadTimer);
+      viewerLoadTimer = null;
+      mountViewerImage(full, "vfImg", p);
+      $("vfPreview").hidden = true;
+      $("vfPreview").removeAttribute("src");
+      $("vfAf").classList.add("lock");
+      vf.setAttribute("aria-busy", "false");
+      viewerStatus("");
+    }).catch(failed);
   }
 
   // 翻页只在亮着的照片里走；如果点开的是暗掉的那张，就跳到它前后最近的亮着的
@@ -426,32 +498,44 @@
   }
 
   function vfOpen(id) {
+    const p = byId(id); if (!p) return;
     lastFocus = document.activeElement;
     hideLoupe();
     vf.classList.add("open"); document.body.classList.add("lock");
-    vfShow(byId(id));
-    $("vfClose").focus();
+    vf.setAttribute("aria-hidden", "false");
+    vfShow(p);
+    $("vfClose").focus({ preventScroll: true });
   }
   function vfClose() {
-    clearTimeout(viewerTimer); clearTimeout(focusTimer);
+    cancelViewerLoad();
     vf.classList.remove("open"); document.body.classList.remove("lock");
+    vf.setAttribute("aria-hidden", "true");
+    vf.setAttribute("aria-busy", "false");
+    clearViewerImages();
+    viewerStatus("");
     if (sheetDirty) { renderSheet(); applyFilter(); }
     const f = cur && frames.find(f => f.dataset.id === cur.id);
-    if (f) { f.scrollIntoView({ block: "nearest" }); f.classList.remove("flash"); void f.offsetWidth; f.classList.add("flash"); }
-    if (lastFocus && document.contains(lastFocus)) lastFocus.focus();
+    if (f) { f.scrollIntoView({ block: "nearest", behavior: "instant" }); f.classList.remove("flash"); void f.offsetWidth; f.classList.add("flash"); }
+    const focus = f?.querySelector(".win") || lastFocus;
+    if (focus && document.contains(focus)) focus.focus({ preventScroll: true });
   }
 
   $("sheet").addEventListener("click", e => { const w = e.target.closest(".win"); if (w) vfOpen(w.dataset.id); });
   $("vfClose").onclick = vfClose;
   $("vfPrev").onclick = () => step(-1);
   $("vfNext").onclick = () => step(1);
+  $("vfRetry").onclick = () => vfShow(cur);
   addEventListener("keydown", e => {
     if (!vf.classList.contains("open")) return;
     if (e.target instanceof Element && e.target.matches("input, textarea, select")) { if (e.key === "Escape") e.target.blur(); return; }
-    if (e.key === "Escape") vfClose();
-    if (e.key === "ArrowRight") step(1);
-    if (e.key === "ArrowLeft") step(-1);
-    if (e.key.toLowerCase() === "f") { cover = !cover; $("vfImg").classList.toggle("cover", cover); }
+    if (e.key === "Escape") { e.preventDefault(); vfClose(); }
+    if (e.key === "ArrowRight") { e.preventDefault(); step(1); }
+    if (e.key === "ArrowLeft") { e.preventDefault(); step(-1); }
+    if (e.key.toLowerCase() === "f") {
+      e.preventDefault();
+      cover = !cover;
+      for (const id of ["vfPreview", "vfImg"]) $(id).classList.toggle("cover", cover);
+    }
   });
   let x0 = null;
   vf.addEventListener("touchstart", e => { x0 = e.target.closest(".ed") ? null : e.touches[0].clientX; }, { passive: true });
