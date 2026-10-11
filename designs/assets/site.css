@@ -121,16 +121,16 @@
   footer { padding: 8px var(--gutter) 48px; display: flex; justify-content: space-between; color: var(--ink-dim); font-size: 13px; }
 
   /* ———— 取景器（点开后的全屏模式） ———— */
-  .vf { display: none; position: fixed; inset: 0; z-index: 40; overflow: hidden; contain: layout paint; background: #000; color: rgba(255,255,255,.92); }
+  .vf { --lcd: 150px; display: none; position: fixed; inset: 0; z-index: 40; overflow: hidden; contain: layout paint; background: #000; color: rgba(255,255,255,.92); }
   .vf.open { display: block; }
   .vf .bg { position: absolute; inset: -20px; background-size: cover; background-position: center; filter: blur(20px) brightness(.25) saturate(1.2); }
-  .vf .photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; padding: 70px 72px 150px; }
+  .vf .photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; padding: 70px 72px calc(var(--lcd) + 28px); }
   .vf .photo[hidden] { display: none; }
   .vf .photo.cover { object-fit: cover; padding: 0; }
-  .vf .vstatus { position: absolute; left: 50%; bottom: 132px; transform: translateX(-50%); z-index: 4; display: flex; align-items: center; gap: 12px; padding: 7px 12px; background: rgba(0,0,0,.65); font-size: 12px; color: rgba(255,255,255,.7); white-space: nowrap; }
+  .vf .vstatus { position: absolute; left: 50%; bottom: calc(var(--lcd) + 10px); transform: translateX(-50%); z-index: 4; display: flex; align-items: center; gap: 12px; padding: 7px 12px; background: rgba(0,0,0,.65); font-size: 12px; color: rgba(255,255,255,.7); white-space: nowrap; }
   .vf .vstatus[hidden] { display: none; }
   .vf .vstatus button { color: var(--edge); text-decoration: underline; }
-  .vf .frm { position: absolute; inset: 56px 52px 132px; pointer-events: none; z-index: 2; }
+  .vf .frm { position: absolute; inset: 56px 52px calc(var(--lcd) + 10px); pointer-events: none; z-index: 2; }
   .vf .frm i { position: absolute; width: 26px; height: 26px; border: 0 solid rgba(255,255,255,.5); }
   .vf .frm i:nth-child(1) { left: 0; top: 0; border-left-width: 1px; border-top-width: 1px; }
   .vf .frm i:nth-child(2) { right: 0; top: 0; border-right-width: 1px; border-top-width: 1px; }
@@ -141,7 +141,7 @@
   .vf .vtop { position: absolute; inset: 0 0 auto 0; z-index: 4; display: flex; justify-content: space-between; align-items: center; padding: 18px 52px; font-family: var(--mono); font-size: 11px; color: rgba(255,255,255,.6); }
   .vf .vtop b { color: var(--edge); font-weight: 400; }
   .vf .vclose { font-family: var(--zh); font-size: 13px; color: rgba(255,255,255,.7); }
-  .vf .zone { position: absolute; top: 56px; bottom: 132px; width: 30%; z-index: 2; }
+  .vf .zone { position: absolute; top: 56px; bottom: calc(var(--lcd) + 10px); width: 30%; z-index: 2; }
   .vf .zone.prev { left: 0; cursor: w-resize; } .vf .zone.next { right: 0; cursor: e-resize; }
   .vf .lcd { position: absolute; inset: auto 0 0 0; z-index: 4; padding: 0 52px 20px; background: linear-gradient(transparent, rgba(0,0,0,.8) 40%); }
   .vf .cap { display: flex; justify-content: space-between; align-items: baseline; gap: 20px; padding-bottom: 12px; }
@@ -222,9 +222,9 @@
     .frame { width: 50%; }
     .fedge { font-size: 8px; left: 5px; right: 5px; }
     .loupe { display: none; }
-    .vf .frm { inset: 56px 12px 190px; }
-    .vf .photo { padding: 64px 16px 200px; }
-    .vf .vstatus { bottom: 190px; }
+    .vf .frm { inset: 56px 12px calc(var(--lcd) + 10px); }
+    .vf .photo { padding: 64px 16px calc(var(--lcd) + 20px); }
+    .vf .vstatus { bottom: calc(var(--lcd) + 10px); }
     .vf .vtop { padding: 16px; }
     .vf .lcd { padding: 0 16px 16px; }
     .vf .cap { flex-direction: column; gap: 4px; }
@@ -232,7 +232,7 @@
     .vf .readout { gap: 18px; min-height: 0; flex-wrap: wrap; }
     .vf .readout strong { font-size: 30px; }
     .vf .readout .gear, .vf .readout .mini, .vf .hint { display: none; }
-    .vf .zone { top: 56px; bottom: 190px; }
+    .vf .zone { top: 56px; bottom: calc(var(--lcd) + 10px); }
     .ed { top: auto; height: 52vh; width: 100%; border-left: 0; border-top: 1px solid #2f2a24; }
     .vf.editing .photo { padding: 56px 12px 52vh; }
     .vf.editing .photo.cover { padding: 0 0 52vh; }

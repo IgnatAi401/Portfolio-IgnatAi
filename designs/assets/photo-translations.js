@@ -1,7 +1,7 @@
 // English captions keyed by the original text. New or edited text falls back to
 // its source until a translation is added; never overwrite the photo database.
 I18N.add(Object.fromEntries(`
-后置主摄 f/1.78|Rear main camera f/1.78
+后置主摄 f/1.78|Main camera f/1.78
 落叶里的一家人|A Family among Fallen Leaves
 驶向城里的列车|A Train Bound for the City
 林荫夜路|A Tree-Lined Road at Night
@@ -14,12 +14,12 @@ I18N.add(Object.fromEntries(`
 圣瓦西里前的人群|Crowds outside Saint Basil’s
 克里姆林宫外的车流|Traffic outside the Kremlin
 古姆的灯|The Lights of GUM
-头顶鸽子的人|A Pigeon on His Head
+头顶鸽子的人|A Pigeon on Someone’s Head
 尖顶与风向标|Spire and Weathervane
 木宫里的吊灯|Chandeliers in the Wooden Palace
 一地的灯|Lights across the Ground
 涟漪里的野鸭|A Duck among Ripples
-白色尖顶教堂|A White Spired Church
+白色尖顶教堂|A White Church with a Spire
 金袍神父|A Priest in Gold
 金色的圣像|Golden Icons
 挂红灯笼的门|A Door with Red Lanterns
@@ -27,7 +27,7 @@ I18N.add(Object.fromEntries(`
 街头弹唱|A Street Musician
 积水里的店铺|Shopfronts in a Puddle
 夜里的中央百货|TsUM at Night
-水中垂钓的人|Fishing in the Water
+水中垂钓的人|An Angler Standing in the Water
 扎猛子的鸭子|A Diving Duck
 冬晨的烟囱|Chimneys on a Winter Morning
 初雪站台|First Snow on the Platform
@@ -51,7 +51,7 @@ I18N.add(Object.fromEntries(`
 雾中长椅上的人|On a Bench in the Fog
 指向远方|Pointing into the Distance
 深夜的街|A Street Late at Night
-节日的商场|A Shopping Mall in Holiday Dress
+节日的商场|A Mall Dressed for the Holidays
 挂满彩球的树|A Tree Full of Baubles
 尼古拉塔下的人潮|Crowds beneath Nikolskaya Tower
 和严寒老人合影|A Photo with Father Frost
@@ -66,7 +66,7 @@ I18N.add(Object.fromEntries(`
 雾里的工农像|Worker and Kolkhoz Woman in Fog
 顶着纸箱的孩子|A Child with a Box on Their Head
 雪姑娘和她的伙伴们|The Snow Maiden and Friends
-跨年前夜的街|The Street before New Year
+跨年前夜的街|The Street on New Year’s Eve
 第一道极光|First Aurora
 零下的北极城|An Arctic City below Zero
 冰雪里的告示牌|A Sign in Ice and Snow
@@ -99,7 +99,7 @@ I18N.add(Object.fromEntries(`
 点蜡烛的人|Lighting a Candle
 栏杆上的白鸽|A White Dove on the Railing
 雪中的帆船|A Sailing Ship in Snow
-阿芙乐尔号上的炮|A Gun aboard Aurora
+阿芙乐尔号上的炮|A Gun aboard the Aurora
 雪地里的母女|Mother and Daughter in Snow
 和狗打滚的孩子|A Child Playing with a Dog
 雪雾里的红旗|A Red Flag in Snow Haze
@@ -108,7 +108,7 @@ I18N.add(Object.fromEntries(`
 金色圣障|A Golden Iconostasis
 柱廊上的落日|Sunset from the Colonnade
 穹顶的基督像|Christ in the Dome
-满墙的马赛克|Walls of Mosaics
+满墙的马赛克|Walls Covered in Mosaics
 枷锁里的笑脸|A Smile in the Stocks
 牵手走在雪里|Hand in Hand through Snow
 夜色里的滴血大教堂|The Church on Spilled Blood at Night
@@ -148,7 +148,7 @@ I18N.add(Object.fromEntries(`
 蓝管上的同心锁|Love Locks on a Blue Pipe
 雪后的白桦林|Birch Woods after Snow
 门洞里的金顶|A Golden Dome through a Doorway
-逆光的行人|Pedestrians against the Light
+逆光的行人|Backlit Pedestrians
 阴影中的骑廊|An Arcade in Shadow
 街头的人群|People in the Street
 街头朗读者|A Street Reader
@@ -187,7 +187,7 @@ I18N.add(Object.fromEntries(`
 路口的两个年轻人|Two Young People at a Crossing
 送外卖的轮滑者|A Delivery Skater
 草坪上的新人|Newlyweds on the Lawn
-长椅上的人与乌鸦|A Person on a Bench and a Crow
+长椅上的人与乌鸦|On a Bench with a Crow
 夜幕下的楼|A Building after Dark
 站台指示牌|A Platform Sign
 莫斯科城夜色|Moscow City by Night
@@ -208,7 +208,7 @@ I18N.add(Object.fromEntries(`
 红色无轨电车|A Red Trolleybus
 纪念碑前的老夫妇|An Elderly Couple at the Monument
 河上的长桥|A Long Bridge across the River
-红场边的夜色|Night beside Red Square
+红场边的夜色|Night by Red Square
 黄昏的街角大楼|A Corner Building at Dusk
 河边的长椅与单车|A Bench and Bicycle by the River
 振翅|Wings Unfurled
@@ -235,7 +235,7 @@ I18N.add(Object.fromEntries(`
 郁金香与三一塔|Tulips and Trinity Tower
 会发光的塔|An Illuminated Tower
 等烟花的人群|Waiting for Fireworks
-逆光的草丛|Grass against the Light
+逆光的草丛|Backlit Grass
 远眺的骑行者|A Cyclist Looking into the Distance
 街头卖艺的老人|An Elderly Street Performer
 健身节的人群|Crowds at a Fitness Festival
@@ -312,8 +312,8 @@ I18N.add(Object.fromEntries(`
 秋天写生的人|Sketching in Autumn
 披国旗的年轻人们|Young People Draped in Flags
 雕像下休息的人|Resting beneath a Statue
-花墙前的少年|A Young Person by a Flower Wall
-地铁门口的少年|A Young Person at the Metro Entrance
+花墙前的少年|A Teenager by a Flower Wall
+地铁门口的少年|A Teenager at the Metro Entrance
 船头的国旗|A Flag at the Bow
 一群人的合影|A Group Portrait
 抱孩子的父亲|A Father Holding His Child
@@ -357,7 +357,7 @@ I18N.add(Object.fromEntries(`
 千本鸟居里的和服背影|A Kimono among the Torii Gates
 火烧云下的东京|Tokyo beneath a Fiery Sky
 清晨的谢赫扎耶德路|Sheikh Zayed Road at Dawn
-逆光里的楼群|Towers against the Light
+逆光里的楼群|Backlit Towers
 棕榈树后的高楼|Towers behind Palm Trees
 未来博物馆|Museum of the Future
 黑色超跑|A Black Supercar
@@ -425,7 +425,7 @@ I18N.add(Object.fromEntries(`
 集市里的灯具摊|A Lamp Stall in the Bazaar
 海峡上的渡轮|A Ferry on the Strait
 探出头的猫|A Cat Peeking Out
-海鸥特写|A Seagull Close Up
+海鸥特写|A Seagull Up Close
 墙头走来的猫|A Cat Walking along a Wall
 街角的麦当劳|McDonald’s on the Corner
 街头的两个人|Two People in the Street
@@ -449,7 +449,7 @@ I18N.add(Object.fromEntries(`
 夜色中的加拉塔塔|Galata Tower at Night
 清晨的剪影|Silhouettes at Dawn
 旅行社门口的两人|Two People outside a Travel Agency
-电线杆旁的热气球|A Balloon beside a Utility Pole
+电线杆旁的热气球|A Hot-Air Balloon beside a Utility Pole
 山坡上的石屋|Stone Houses on the Hillside
 一朵粉玫瑰|A Pink Rose
 葡萄藤下的小路|A Path beneath the Vines
@@ -481,12 +481,12 @@ I18N.add(Object.fromEntries(`
 长廊里的身影|A Figure in the Corridor
 车棚里的穿行者|Passing through the Bicycle Shelter
 地铁口的午后|Afternoon at the Metro Entrance
-肩头看夜空|Watching the Night Sky from a Shoulder
+肩头看夜空|Watching the Night Sky from Someone’s Shoulders
 江上焰火|Fireworks over the River
 夜色里的街头乐队|A Street Band at Night
 骑楼下的街巷|A Street beneath Arcaded Buildings
 国旗与天际线|Flag and Skyline
-江畔的合影|A Portrait by the River
+江畔的合影|A Group Photo by the River
 夕照东方明珠|The Oriental Pearl in the Evening Sun
 华灯初上的江岸|The Riverbank as the Lights Come On
 树影里的单车|A Bicycle in Tree Shadows
@@ -513,7 +513,7 @@ I18N.add(Object.fromEntries(`
 阿廖沙纪念碑|Alyosha Monument
 捷里别尔卡|Teriberka
 喀山大教堂|Kazan Cathedral
-阿芙乐尔号巡洋舰|Cruiser Aurora
+阿芙乐尔号巡洋舰|The Cruiser Aurora
 芬兰湾|Gulf of Finland
 拉赫塔中心|Lakhta Center
 圣以撒大教堂|Saint Isaac’s Cathedral
@@ -528,7 +528,7 @@ I18N.add(Object.fromEntries(`
 北河运站|Northern River Terminal
 莫斯科河|Moskva River
 莫斯科城|Moscow City
-红场中国新年|Lunar New Year at Red Square
+红场中国新年|Lunar New Year on Red Square
 麻雀山|Sparrow Hills
 莫斯科国立大学|Moscow State University
 加加林观景台|Gagarin Observation Deck
@@ -548,7 +548,7 @@ I18N.add(Object.fromEntries(`
 弗拉基米尔|Vladimir
 马涅日广场|Manezhnaya Square
 莫斯科动物园|Moscow Zoo
-红场胜利日|Victory Day at Red Square
+红场胜利日|Victory Day on Red Square
 中央武装力量博物馆|Central Armed Forces Museum
 中央武装力量博物馆胜利日|Victory Day at the Central Armed Forces Museum
 俄罗斯国家图书馆|Russian State Library
@@ -568,7 +568,7 @@ I18N.add(Object.fromEntries(`
 胜利日|Victory Day
 察里津诺|Tsaritsyno
 华明公园|Huaming Park
-红场新年|New Year at Red Square
+红场新年|New Year on Red Square
 伏见稻荷大社|Fushimi Inari Taisha
 涩谷Sky|Shibuya Sky
 谢赫扎耶德路|Sheikh Zayed Road

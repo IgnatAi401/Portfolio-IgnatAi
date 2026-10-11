@@ -399,10 +399,13 @@
   /* ———————— 取景器 ———————— */
   const vf = $("vf");
   let cur = null, cover = false, lastFocus = null;
+  // 底部信息栏高度随内容变化，量出来给取景框四角和照片留位置，免得压到文字。
+  new ResizeObserver(([e]) => vf.style.setProperty("--lcd", Math.ceil(e.borderBoxSize?.[0]?.blockSize ?? e.target.offsetHeight) + "px"))
+    .observe(vf.querySelector(".lcd"));
 
   function paintViewer(p) {
     const lit = navList(p), i = lit.indexOf(p);
-    $("vfRoll").innerHTML = `<b>${esc(countryLabel(p.country))}</b>　${esc(cityLabel(p.city, p.country) || t("城市待补"))}　▸ ${t("frameNumber", { pending: p.review ? t("待审核") + " " : "", number: ORD.get(p) + 1 })}`;
+    $("vfRoll").innerHTML = `<b>${esc(countryLabel(p.country))}</b>　${esc(cityLabel(p.city, p.country) || t("城市待补"))}　▸ ${t("frameNumber", { pending: p.review ? t("待审核") + (I18N.language === "en" ? " · " : " ") : "", number: ORD.get(p) + 1 })}`;
     $("vfFilt").textContent = p.review ? t("只翻待审核的")
       : state.country || state.city || state.type !== "all"
       ? `${t("当前筛选：")}${[state.city ? cityLabel(state.city, state.country) : countryLabel(state.country), state.type !== "all" && t(state.type)].filter(Boolean).join(" · ")}` : "";
