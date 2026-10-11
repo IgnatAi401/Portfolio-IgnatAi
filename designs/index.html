@@ -70,6 +70,10 @@
   <!-- 编辑面板：只在本地编辑服务器下出现，改动自动保存到 shared/photos.json -->
   <aside class="ed" id="ed" hidden aria-label="编辑照片信息">
     <div class="ed-h"><b>编辑这张</b><span id="edFile"></span></div>
+    <div class="ed-review" id="edReview" hidden>
+      <p>这张还在待审核。核对下面的标题、城市、类别和元数据（AI 推测的可能有错），没问题再通过。</p>
+      <button type="button" id="edApprove">审核通过，并入作品</button>
+    </div>
     <label class="f"><span>标题</span><input data-k="title" placeholder="给这张起个名字"></label>
     <div class="f"><span>城市</span><div class="chips" id="edCity" role="radiogroup" aria-label="城市"></div></div>
     <div class="f"><span>类别</span><div class="chips" id="edType" role="radiogroup" aria-label="类别"></div></div>

@@ -178,6 +178,12 @@
   .ed .sep { height: 1px; background: #2f2a24; margin: 4px 0 14px; }
   .ed-s { margin-top: 6px; font-size: 12px; color: var(--ink-dim); min-height: 1.5em; }
   .ed-s.err { color: #ff8a7a; }
+  .ed-review { border: 1px dashed var(--edge); padding: 10px 12px 12px; margin-bottom: 14px; }
+  .ed-review[hidden] { display: none; }
+  .ed-review p { font-size: 12px; color: var(--ink-dim); line-height: 1.6; margin-bottom: 9px; }
+  .ed-review button { width: 100%; padding: 8px; background: var(--edge); color: var(--film); font-size: 13px; font-weight: 500; }
+  .pending { margin-bottom: 30px; padding-bottom: 26px; border-bottom: 1px dashed #4a4239; }
+  .pending .sheet-head h2 { color: var(--edge); }
   .ed-tip { font-size: 11.5px; color: #6f675d; line-height: 1.6; margin-top: 10px; }
   .vf.editing .photo { padding-right: 432px; }
   .vf.editing .frm { right: 412px; }

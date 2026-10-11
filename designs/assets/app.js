@@ -6,12 +6,15 @@
   const TYPES = ["人文", "风景"];
   const state = { country: null, city: null, type: "all", hot: null };
 
-  let DB = null, ORDER = [], ORD = new Map(), COUNTRIES = [];
+  let DB = null, ORDER = [], PEND = [], ORD = new Map(), COUNTRIES = [];
   let PHOTOS = new Map(), COUNTRY_PHOTOS = new Map(), COUNTRY_INFO = new Map();
   let LIT = null, frames = [], regionButtons = [], mapCountries = [];
   const byId = id => PHOTOS.get(id);
   const isLit = p => (!state.country || p.country === state.country) && (!state.city || p.city === state.city) && (state.type === "all" || p.type === state.type);
   const litList = () => LIT ||= ORDER.filter(isLit);
+  // 待审核的照片（review: true）单独一栏，只在本地编辑服务器下出现；审核通过后才进入作品、地图和筛选
+  let canEdit = false;
+  const navList = p => p?.review ? PEND : litList();
   const fmt = (lat, lon) => `${Math.abs(lat).toFixed(2)}°${lat >= 0 ? "N" : "S"}  ${Math.abs(lon).toFixed(2)}°${lon >= 0 ? "E" : "W"}`;
   const day = p => (p.taken || "").slice(0, 10);
   const when = p => p.taken ? p.taken.slice(0, 16).replace("T", " ") : "日期待补";
@@ -40,8 +43,10 @@
       COUNTRY_PHOTOS.get(p.country).push(p);
     });
     const key = p => (p.taken || "9999") + p.id;
-    ORDER = [...DB.photos].sort((a, b) => key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0);
-    ORD = new Map(ORDER.map((p, i) => [p, i]));
+    const sorted = [...DB.photos].sort((a, b) => key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0);
+    ORDER = sorted.filter(p => !p.review);
+    PEND = sorted.filter(p => p.review);
+    ORD = new Map([...ORDER.map((p, i) => [p, i]), ...PEND.map((p, i) => [p, i])]);
     const orderedCountries = new Map();
     ORDER.forEach(p => {
       if (!orderedCountries.has(p.country)) orderedCountries.set(p.country, []);
@@ -266,7 +271,7 @@
     document.querySelectorAll("#toggle button").forEach(x => x.setAttribute("aria-pressed", x.dataset.type === state.type));
     frames.forEach(f => {
       const p = byId(f.dataset.id);
-      f.classList.toggle("off", !!p && !isLit(p));
+      f.classList.toggle("off", !!p && !p.review && !isLit(p));
     });
   }
 
@@ -280,7 +285,7 @@
     const n = ORD.get(p) + 1, md = p.taken ? `${p.taken.slice(5, 7)}.${p.taken.slice(8, 10)}` : "——";
     const dash = v => has(v) ? esc(v) : "—";
     return `
-      <div class="frame${isLit(p) ? "" : " off"}" data-id="${esc(p.id)}">
+      <div class="frame${p.review || isLit(p) ? "" : " off"}" data-id="${esc(p.id)}">
         <div class="fedge t"><span>${md}</span><span>▸ ${n}</span><span>${n}A</span></div>
         <button class="win ${p.h > p.w ? "rot" : ""}" data-id="${esc(p.id)}" aria-label="全屏看：${esc(p.title || "未命名")}">
           <img src="${esc(thumbSrc(p))}" alt="${esc(p.title)}" loading="lazy" decoding="async" draggable="false">
@@ -291,13 +296,13 @@
   }
 
   // 同一天的照片接成一段胶片，每段最多 6 格
-  function renderSheet() {
+  function stripsHTML(list) {
     const strips = [];
     let i = 0;
-    while (i < ORDER.length) {
-      const d = day(ORDER[i]);
-      let j = i; while (j < ORDER.length && day(ORDER[j]) === d) j++;
-      const items = ORDER.slice(i, j);
+    while (i < list.length) {
+      const d = day(list[i]);
+      let j = i; while (j < list.length && day(list[j]) === d) j++;
+      const items = list.slice(i, j);
       const cities = [...new Set(items.map(p => p.city || "城市待补"))].join(" / ");
       for (let k = 0; k < items.length; k += 6) {
         const tag = k ? "" : `<span class="roll-tag">${d ? d.replaceAll("-", ".") : "日期待补"}　${esc(cities)}</span>`;
@@ -305,13 +310,25 @@
       }
       i = j;
     }
-    const nCity = new Set(DB.photos.map(p => p.city).filter(Boolean)).size;
-    $("sheet").innerHTML = `
+    return strips.join("");
+  }
+
+  function renderSheet() {
+    const nCity = new Set(ORDER.map(p => p.city).filter(Boolean)).size;
+    const pending = canEdit && PEND.length ? `
+      <section class="pending" aria-label="待审核">
+        <div class="sheet-head">
+          <h2>待审核<small>${PEND.length} 张，审核通过前不会出现在作品、地图和筛选里，也不会上线</small></h2>
+          <span class="note">点开一张，在右侧核对信息，再点「审核通过」</span>
+        </div>
+        <div class="strips">${stripsHTML(PEND)}</div>
+      </section>` : "";
+    $("sheet").innerHTML = pending + `
       <div class="sheet-head">
         <h2>Proof ${years(ORDER)}<small>${nCity} 个地方，${ORDER.length} 张</small></h2>
         <span class="note"><svg viewBox="0 0 26 16"><path d="M2 3 C8 1 18 1 24 3 C25 7 25 10 23 14 C16 15 8 15 3 13 C1 9 1 6 3 2" fill="none" stroke="#c9302a" stroke-width="2"/></svg>红笔框的是精选；点任意一格全屏看</span>
       </div>
-      <div class="strips">${strips.join("")}</div>`;
+      <div class="strips">${stripsHTML(ORDER)}</div>`;
     frames = [...$("sheet").querySelectorAll(".frame[data-id]")];
     hideLoupe();
     sheetDirty = false;
@@ -357,9 +374,10 @@
   let cur = null, cover = false, lastFocus = null;
 
   function paintViewer(p) {
-    const lit = litList(), i = lit.indexOf(p);
-    $("vfRoll").innerHTML = `<b>${esc(p.country)}</b>　${esc(p.city || "城市待补")}　▸ 第 ${ORD.get(p) + 1} 张`;
-    $("vfFilt").textContent = state.country || state.city || state.type !== "all"
+    const lit = navList(p), i = lit.indexOf(p);
+    $("vfRoll").innerHTML = `<b>${esc(p.country)}</b>　${esc(p.city || "城市待补")}　▸ ${p.review ? "待审核 " : ""}第 ${ORD.get(p) + 1} 张`;
+    $("vfFilt").textContent = p.review ? "只翻待审核的"
+      : state.country || state.city || state.type !== "all"
       ? `只翻亮着的：${[state.city || state.country, state.type !== "all" && state.type].filter(Boolean).join(" · ")}` : "";
     $("vfTitle").textContent = p.title || "（未命名）";
     $("vfPlace").textContent = [[p.city, p.spot].filter(Boolean).join(" · "), when(p), p.type].filter(Boolean).join("　");
@@ -387,7 +405,7 @@
       $("vfImg").classList.toggle("cover", cover);
       $("vfBg").style.backgroundImage = `url("${thumbSrc(p)}")`;
       paintViewer(p);
-      if (editing) fillEditor(p);
+      syncEditor();
     };
     if (!animate) return apply();
     const sh = $("vfShutter"); sh.classList.remove("fire"); void sh.offsetWidth; sh.classList.add("fire");
@@ -398,7 +416,7 @@
 
   // 翻页只在亮着的照片里走；如果点开的是暗掉的那张，就跳到它前后最近的亮着的
   function step(dir) {
-    const lit = litList();
+    const lit = navList(cur);
     if (!lit.length || !cur) return;
     const o = ORD.get(cur);
     const next = dir > 0
@@ -446,9 +464,14 @@
   function setEditing(on) {
     editing = on;
     $("editToggle").setAttribute("aria-pressed", on);
+    try { localStorage.setItem("ignat-edit", on ? "1" : ""); } catch {}
+    syncEditor();
+  }
+  // 待审核的照片不管编辑模式开没开，都带着编辑面板（要在面板里点「审核通过」）
+  function syncEditor() {
+    const on = editing || !!cur?.review;
     vf.classList.toggle("editing", on);
     ed.hidden = !on;
-    try { localStorage.setItem("ignat-edit", on ? "1" : ""); } catch {}
     if (on && cur && vf.classList.contains("open")) fillEditor(cur);
   }
   $("editToggle").onclick = () => setEditing(!editing);
@@ -459,6 +482,7 @@
 
   function fillEditor(p) {
     $("edFile").textContent = p.src.split("/").pop().replace(/\.webp$/, "");
+    $("edReview").hidden = !p.review;
     $("edCity").innerHTML = chips("city", citiesOf(p.country), p.city, `<button type="button" id="edAddCity">＋ 新地点</button>`);
     $("edType").innerHTML = chips("type", TYPES, p.type);
     ed.querySelectorAll("[data-k]").forEach(el => {
@@ -505,6 +529,19 @@
       edited(el.dataset.k, readField(el));
     }
   });
+  // 审核通过：去掉 review 标记，并入作品；还有待审核的就接着翻下一张
+  $("edApprove").onclick = () => {
+    const i = PEND.indexOf(cur);
+    delete cur.review;
+    LIT = null;
+    derive(); renderBar();
+    sheetDirty = true;
+    scheduleSave();
+    if (PEND.length) vfShow(PEND[Math.min(i, PEND.length - 1)]);
+    else { paintViewer(cur); syncEditor(); }
+    status(`已通过，并入作品（还剩 ${PEND.length} 张待审核）`);
+  };
+
   ed.addEventListener("click", e => {
     if (e.target.id !== "edAddCity") return;
     const name = (prompt(`在「${cur.country}」下面加一个新地点：`) || "").trim();
@@ -553,7 +590,9 @@
     // 只有本地编辑服务器有 /api/edit；部署成静态网站时这里会失败，编辑按钮保持隐藏
     fetch("/api/edit", { cache: "no-store" }).then(r => r.ok && r.json()).then(j => {
       if (!j || !j.ok) return;
+      canEdit = true;
       $("editToggle").hidden = false;
+      if (PEND.length) { renderSheet(); applyFilter(); }
       let saved = false; try { saved = localStorage.getItem("ignat-edit") === "1"; } catch {}
       setEditing(saved);
     }).catch(() => {});
