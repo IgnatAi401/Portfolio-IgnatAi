@@ -1,4 +1,12 @@
   const $ = id => document.getElementById(id);
+  const t = I18N.t;
+  const label = value => t(value || "");
+  const countryLabel = name => I18N.language === "en" ? DB?.countries[name]?.en || label(name) : name;
+  const cityLabel = (name, country) => I18N.language === "en"
+    ? DB?.countries[country]?.cities?.find(c => c.name === name)?.en || label(name) : name;
+  const photoTitle = p => label(p.title || "未命名");
+  const photoAlt = p => [photoTitle(p), cityLabel(p.city, p.country), label(p.spot)].filter(Boolean).join(", ");
+  const photoCount = count => t("photoCount", { count });
   const pad = n => String(n).padStart(2, "0");
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const fullSrc = p => `photos/full/${p.src}`;
@@ -17,7 +25,7 @@
   const navList = p => p?.review ? PEND : litList();
   const fmt = (lat, lon) => `${Math.abs(lat).toFixed(2)}°${lat >= 0 ? "N" : "S"}  ${Math.abs(lon).toFixed(2)}°${lon >= 0 ? "E" : "W"}`;
   const day = p => (p.taken || "").slice(0, 10);
-  const when = p => p.taken ? p.taken.slice(0, 16).replace("T", " ") : "日期待补";
+  const when = p => p.taken ? p.taken.slice(0, 16).replace("T", " ") : t("日期待补");
   const has = v => v !== null && v !== undefined && v !== "";
 
   // 某国家的城市选项：先用 photos.json 里登记的，再补上照片里出现但没登记的
@@ -175,7 +183,7 @@
       const g = GEO.get(c.name);
       [g.x, g.y] = path.centroid(g.feature);
       const hit = path.area(g.feature) < 400 ? `<circle class="hit" cx="${g.x.toFixed(1)}" cy="${g.y.toFixed(1)}" r="12"/>` : "";
-      return `<g class="ctry" data-country="${esc(c.name)}" tabindex="0" role="button" aria-label="${esc(c.name)}，${c.items.length} 张">${hit}<path d="${path(g.feature)}"/></g>`;
+      return `<g class="ctry" data-country="${esc(c.name)}" tabindex="0" role="button" aria-label="${esc(countryLabel(c.name))}, ${photoCount(c.items.length)}">${hit}<path d="${path(g.feature)}"/></g>`;
     }).join("");
     mapCountries = [...svg.querySelectorAll(".ctry")];
     $("mapLoading").remove();
@@ -194,11 +202,11 @@
     const show = [...c.items.filter(p => p.pick), ...c.items.filter(p => !p.pick)].slice(0, 3);
     tip.innerHTML = `
       <div class="h"><span>${esc(c.en.toUpperCase())}</span><span>${c.items.length} EXP</span></div>
-      <h3>${esc(c.name)}<small>${esc(c.en)}</small></h3>
-      <div class="meta">${years(c.items)}　人文 ${st}　风景 ${ls}</div>
-      <div class="meta">${c.cities.map(esc).join(" · ")}</div>
+      <h3>${esc(countryLabel(c.name))}${I18N.language === "zh" ? `<small>${esc(c.en)}</small>` : ""}</h3>
+      <div class="meta">${years(c.items)} · ${t("人文")} ${st} · ${t("风景")} ${ls}</div>
+      <div class="meta">${c.cities.map(city => esc(cityLabel(city, c.name))).join(" · ")}</div>
       <div class="thumbs">${show.map(p => `<img src="${esc(thumbSrc(p))}" alt="" decoding="async">`).join("")}</div>
-      <div class="go">点击跳到印样</div>`;
+      <div class="go">${t("点击跳到印样")}</div>`;
     const px = g.x / W * 100, py = g.y / H * 100, right = px > 62;
     tip.style.left = right ? "auto" : `calc(${px}% + 26px)`;
     tip.style.right = right ? `calc(${100 - px}% + 26px)` : "auto";
@@ -224,8 +232,8 @@
 
   /* ———————— 地区 + 类别筛选 ———————— */
   function renderBar() {
-    $("rolls").innerHTML = `<button data-all aria-pressed="${!state.country}">全部国家<small>${ORDER.length}</small></button>` +
-      COUNTRIES.map(c => `<button data-country="${esc(c.name)}" aria-pressed="${state.country === c.name}">${esc(c.name)}<small>${c.items.length}</small></button>`).join("");
+    $("rolls").innerHTML = `<button data-all aria-pressed="${!state.country}">${t("全部国家")}<small>${ORDER.length}</small></button>` +
+      COUNTRIES.map(c => `<button data-country="${esc(c.name)}" aria-pressed="${state.country === c.name}">${esc(countryLabel(c.name))}<small>${c.items.length}</small></button>`).join("");
     paintBar();
   }
   function paintBar() {
@@ -239,8 +247,8 @@
       b.querySelector("small").textContent = count(b.dataset.all !== undefined ? ORDER : COUNTRY_INFO.get(b.dataset.country)?.items || []);
     });
     $("cityRow").hidden = !c;
-    const cityHTML = c ? `<button data-city="" aria-pressed="${!state.city}">全部城市<small>${count(c.items)}</small></button>` +
-      c.cities.filter(city => c.cityCounts.get(city) > 0).map(city => `<button data-city="${esc(city)}" aria-pressed="${state.city === city}">${esc(city)}<small>${count(c.items.filter(p => p.city === city))}</small></button>`).join("") : "";
+    const cityHTML = c ? `<button data-city="" aria-pressed="${!state.city}">${t("全部城市")}<small>${count(c.items)}</small></button>` +
+      c.cities.filter(city => c.cityCounts.get(city) > 0).map(city => `<button data-city="${esc(city)}" aria-pressed="${state.city === city}">${esc(cityLabel(city, c.name))}<small>${count(c.items.filter(p => p.city === city))}</small></button>`).join("") : "";
     if ($("cities").innerHTML !== cityHTML) {
       const active = document.activeElement;
       const focusedCity = $("cities").contains(active) ? active.dataset.city : undefined;
@@ -249,7 +257,7 @@
     }
     regionButtons = [...$("rolls").querySelectorAll("button")];
     document.querySelectorAll("#toggle button").forEach(b => b.setAttribute("aria-pressed", b.dataset.type === state.type));
-    $("filterSummary").textContent = `${[state.country || "全部国家", state.city, state.type !== "all" && state.type].filter(Boolean).join(" · ")} · ${litList().length} 张`;
+    $("filterSummary").textContent = `${[state.country ? countryLabel(state.country) : t("全部国家"), cityLabel(state.city, state.country), state.type !== "all" && t(state.type)].filter(Boolean).join(" · ")} · ${photoCount(litList().length)}`;
     $("filterReset").disabled = !state.country && !state.city && state.type === "all";
   }
   $("rolls").addEventListener("click", e => {
@@ -301,8 +309,8 @@
     return `
       <div class="frame${p.review || isLit(p) ? "" : " off"}" data-id="${esc(p.id)}">
         <div class="fedge t"><span>${md}</span><span>▸ ${n}</span><span>${n}A</span></div>
-        <button class="win ${p.h > p.w ? "rot" : ""}" data-id="${esc(p.id)}" aria-label="全屏看：${esc(p.title || "未命名")}">
-          <img src="${esc(thumbSrc(p))}" alt="${esc(p.title)}" width="${p.w}" height="${p.h}" loading="lazy" decoding="async" draggable="false">
+        <button class="win ${p.h > p.w ? "rot" : ""}" data-id="${esc(p.id)}" aria-label="${t("全屏看：")}${esc(photoTitle(p))}">
+          <img src="${esc(thumbSrc(p))}" alt="${esc(photoTitle(p))}" width="${p.w}" height="${p.h}" loading="lazy" decoding="async" draggable="false">
         </button>
         ${p.pick ? `<svg class="mark" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="${greaseBox(n)}" vector-effect="non-scaling-stroke"/></svg>` : ""}
         <div class="fedge b"><span>f/${dash(p.f)}</span><span>${dash(p.s)}</span><span>${has(p.mm) ? p.mm + "MM" : "—"}</span><span>ISO${dash(p.iso)}</span></div>
@@ -317,9 +325,9 @@
       const d = day(list[i]);
       let j = i; while (j < list.length && day(list[j]) === d) j++;
       const items = list.slice(i, j);
-      const cities = [...new Set(items.map(p => p.city || "城市待补"))].join(" / ");
+      const cities = [...new Set(items.map(p => cityLabel(p.city, p.country) || t("城市待补")))].join(" / ");
       for (let k = 0; k < items.length; k += 6) {
-        const tag = k ? "" : `<span class="roll-tag">${d ? d.replaceAll("-", ".") : "日期待补"}　${esc(cities)}</span>`;
+        const tag = k ? "" : `<span class="roll-tag">${d ? d.replaceAll("-", ".") : t("日期待补")}　${esc(cities)}</span>`;
         strips.push(`<div class="strip">${tag}${items.slice(k, k + 6).map(frameHTML).join("")}</div>`);
       }
       i = j;
@@ -331,19 +339,19 @@
     const list = litList();
     const nCity = new Set(list.filter(p => p.city).map(p => `${p.country}/${p.city}`)).size;
     const pending = canEdit && PEND.length ? `
-      <section class="pending" aria-label="待审核">
+      <section class="pending" aria-label="${t("待审核")}">
         <div class="sheet-head">
-          <h2>待审核<small>${PEND.length} 张，审核通过前不会出现在作品、地图和筛选里，也不会上线</small></h2>
-          <span class="note">点开一张，在右侧核对信息，再点「审核通过」</span>
+          <h2>${t("待审核")}<small>${t("pendingCount", { count: PEND.length })}</small></h2>
+          <span class="note">${t("点开一张，在右侧核对信息，再点「审核通过」")}</span>
         </div>
         <div class="strips">${stripsHTML(PEND)}</div>
       </section>` : "";
     $("sheet").innerHTML = pending + `
       <div class="sheet-head">
-        <h2>Proof ${years(list)}<small>${nCity} 个地方，${list.length} 张</small></h2>
+        <h2>Proof ${years(list)}<small>${t("proofCount", { cities: nCity, count: list.length })}</small></h2>
 
       </div>
-      <div class="strips">${list.length ? stripsHTML(list) : '<div class="empty">当前条件下没有照片，可切换类别、城市或重置筛选。</div>'}</div>`;
+      <div class="strips">${list.length ? stripsHTML(list) : `<div class="empty">${t("当前条件下没有照片，可切换类别、城市或重置筛选。")}</div>`}</div>`;
     frames = [...$("sheet").querySelectorAll(".frame[data-id]")];
     hideLoupe();
     sheetDirty = false;
@@ -394,18 +402,18 @@
 
   function paintViewer(p) {
     const lit = navList(p), i = lit.indexOf(p);
-    $("vfRoll").innerHTML = `<b>${esc(p.country)}</b>　${esc(p.city || "城市待补")}　▸ ${p.review ? "待审核 " : ""}第 ${ORD.get(p) + 1} 张`;
-    $("vfFilt").textContent = p.review ? "只翻待审核的"
+    $("vfRoll").innerHTML = `<b>${esc(countryLabel(p.country))}</b>　${esc(cityLabel(p.city, p.country) || t("城市待补"))}　▸ ${t("frameNumber", { pending: p.review ? t("待审核") + " " : "", number: ORD.get(p) + 1 })}`;
+    $("vfFilt").textContent = p.review ? t("只翻待审核的")
       : state.country || state.city || state.type !== "all"
-      ? `当前筛选：${[state.city || state.country, state.type !== "all" && state.type].filter(Boolean).join(" · ")}` : "";
-    $("vfTitle").textContent = p.title || "（未命名）";
-    $("vfPlace").textContent = [[p.city, p.spot].filter(Boolean).join(" · "), when(p), p.type].filter(Boolean).join("　");
+      ? `${t("当前筛选：")}${[state.city ? cityLabel(state.city, state.country) : countryLabel(state.country), state.type !== "all" && t(state.type)].filter(Boolean).join(" · ")}` : "";
+    $("vfTitle").textContent = photoTitle(p);
+    $("vfPlace").textContent = [[cityLabel(p.city, p.country), label(p.spot)].filter(Boolean).join(" · "), when(p), label(p.type)].filter(Boolean).join("　");
     $("vfCount").textContent = `${i >= 0 ? pad(i + 1) : "—"} / ${pad(lit.length)}`;
     $("vfS").textContent = p.s || "—";
     $("vfF").textContent = has(p.f) ? "F" + p.f : "—";
     $("vfIso").textContent = has(p.iso) ? p.iso : "—";
     $("vfMm").textContent = has(p.mm) ? p.mm + "mm" : "—";
-    $("vfGear").innerHTML = [p.camera, p.lens].filter(Boolean).map(esc).join("<br>");
+    $("vfGear").innerHTML = [p.camera, p.lens].filter(Boolean).map(value => esc(label(value))).join("<br>");
     const g = cityGeo(p);
     if (miniURL && projection && g) {
       const [x, y] = projection([g[1], g[0]]);
@@ -435,14 +443,15 @@
   }
   function viewerStatus(text, retry = false) {
     $("vfStatus").hidden = !text;
-    $("vfLoadText").textContent = text;
+    $("vfLoadText").dataset.i18n = text;
+    $("vfLoadText").textContent = t(text);
     $("vfRetry").hidden = !retry;
   }
   function mountViewerImage(img, id, p) {
     img.id = id;
     img.className = "photo";
     img.classList.toggle("cover", cover);
-    img.alt = [p.title, p.city, p.spot].filter(Boolean).join("，");
+    img.alt = photoAlt(p);
     img.width = p.w; img.height = p.h;
     img.draggable = false;
     // 放进来的就是已经解码的节点，避免再次改 src 时出现旧图或空白帧。
@@ -576,13 +585,13 @@
   $("editToggle").onclick = () => setEditing(!editing);
 
   function chips(name, values, current, extra = "") {
-    return values.map(v => `<label><input type="radio" name="${name}" value="${esc(v)}"${v === current ? " checked" : ""}><span>${esc(v)}</span></label>`).join("") + extra;
+    return values.map(v => `<label><input type="radio" name="${name}" value="${esc(v)}"${v === current ? " checked" : ""}><span>${esc(name === "city" ? cityLabel(v, cur.country) : label(v))}</span></label>`).join("") + extra;
   }
 
   function fillEditor(p) {
     $("edFile").textContent = p.src.split("/").pop().replace(/\.webp$/, "");
     $("edReview").hidden = !p.review;
-    $("edCity").innerHTML = chips("city", citiesOf(p.country), p.city, `<button type="button" id="edAddCity">＋ 新地点</button>`);
+    $("edCity").innerHTML = chips("city", citiesOf(p.country), p.city, `<button type="button" id="edAddCity">${t("＋ 新地点")}</button>`);
     $("edType").innerHTML = chips("type", TYPES, p.type);
     ed.querySelectorAll("[data-k]").forEach(el => {
       const v = p[el.dataset.k];
@@ -638,12 +647,12 @@
     scheduleSave();
     if (PEND.length) vfShow(PEND[Math.min(i, PEND.length - 1)]);
     else { paintViewer(cur); syncEditor(); }
-    status(`已通过，并入作品（还剩 ${PEND.length} 张待审核）`);
+    status(t("approved", { count: PEND.length }));
   };
 
   ed.addEventListener("click", e => {
     if (e.target.id !== "edAddCity") return;
-    const name = (prompt(`在「${cur.country}」下面加一个新地点：`) || "").trim();
+    const name = (prompt(t("addCity", { country: countryLabel(cur.country) })) || "").trim();
     if (!name) return;
     const meta = DB.countries[cur.country] ||= { en: "", iso: "", cities: [] };
     if (!meta.cities.some(c => c.name === name)) meta.cities.push({ name, en: "", lat: null, lon: null });
@@ -655,7 +664,7 @@
   let saveTimer = null, saveChain = Promise.resolve();
   const status = (msg, err = false) => { $("edStatus").textContent = msg; $("edStatus").classList.toggle("err", err); };
   function scheduleSave() {
-    status("有改动，马上保存…");
+    status(t("有改动，马上保存…"));
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => { saveTimer = null; saveNow(); }, 600);
   }
@@ -665,27 +674,45 @@
       try {
         const r = await fetch("/api/photos", { method: "PUT", headers: { "Content-Type": "application/json" }, body });
         if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || `HTTP ${r.status}`);
-        status(`已保存 ✓ ${new Date().toLocaleTimeString("zh-CN", { hour12: false })}`);
+        status(t("saved", { time: new Date().toLocaleTimeString(I18N.language === "en" ? "en-GB" : "zh-CN", { hour12: false }) }));
       } catch (err) {
-        status(`保存失败：${err.message}。请确认终端里的预览服务器还开着，再改一下任意一项重试。`, true);
+        status(t("saveFailed", { error: err.message }), true);
       }
     });
   }
   addEventListener("beforeunload", e => { if (saveTimer) { e.preventDefault(); e.returnValue = ""; } });
+
+  // Repaint labels only; preserve filters, the current photo and source data.
+  $("languageToggle").addEventListener("click", () => {
+    I18N.toggle();
+    if (!DB) return;
+    renderBar(); renderSheet(); paintMap();
+    mapCountries.forEach(el => {
+      const c = COUNTRY_INFO.get(el.dataset.country);
+      if (c) el.setAttribute("aria-label", `${countryLabel(c.name)}, ${photoCount(c.items.length)}`);
+    });
+    if (state.hot) showTip(state.hot);
+    if (cur && vf.classList.contains("open")) {
+      paintViewer(cur);
+      for (const id of ["vfPreview", "vfImg"]) $(id).alt = photoAlt(cur);
+      syncEditor();
+    }
+  });
+  I18N.apply();
 
   /* ———————— 启动 ———————— */
   (async () => {
     try {
       DB = await fetch("shared/photos.json", { cache: "no-store" }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
     } catch {
-      $("sheet").innerHTML = `<div class="empty">读不到 shared/photos.json。请用预览服务器打开（不要直接双击 html 文件）。</div>`;
+      $("sheet").innerHTML = `<div class="empty" data-i18n="读不到 shared/photos.json。请用预览服务器打开（不要直接双击 html 文件）。">${t("读不到 shared/photos.json。请用预览服务器打开（不要直接双击 html 文件）。")}</div>`;
       return;
     }
     derive();
     $("edgeYears").textContent = `IGNAT ATLAS ▸ ${years(ORDER)}`;
     $("edgeCount").textContent = `${COUNTRIES.length} ${COUNTRIES.length > 1 ? "COUNTRIES" : "COUNTRY"} / ${ORDER.length} EXP`;
     renderBar(); renderSheet();
-    buildMap().catch(() => { $("mapLoading").textContent = "地图暂时无法加载，请刷新重试"; });
+    buildMap().catch(() => { const el = $("mapLoading"); if (el) { el.dataset.i18n = "地图暂时无法加载，请刷新重试"; el.textContent = t(el.dataset.i18n); } });
     // 只有本地编辑服务器有 /api/edit；部署成静态网站时这里会失败，编辑按钮保持隐藏
     fetch("/api/edit", { cache: "no-store" }).then(r => r.ok && r.json()).then(j => {
       if (!j || !j.ok) return;

@@ -3,27 +3,35 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Ignat 摄影作品</title>
+<title data-i18n="Ignat 摄影作品">Ignat 摄影作品</title>
+<link rel="icon" type="image/x-icon" sizes="16x16 32x32 48x48 64x64" href="assets/favicon.ico">
+<link rel="icon" type="image/svg+xml" sizes="any" href="assets/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@300;500;600;800&family=Space+Mono&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/site.css">
+<script defer src="assets/i18n.js"></script>
+<script defer src="assets/photo-translations.js"></script>
 <script defer src="assets/app.js"></script>
 </head>
 <body>
 <header class="top">
   <div class="brand">IGNAT</div>
-  <nav><a href="#" aria-current="page">作品</a><a href="#">关于</a><a href="https://me.ignat.ai" target="_blank" rel="noopener noreferrer">联系</a><button id="editToggle" aria-pressed="false" hidden>编辑模式</button></nav>
+  <div class="top-actions"><nav><a href="#" aria-current="page" data-i18n="作品">作品</a><a href="#" data-i18n="关于">关于</a><a href="https://me.ignat.ai" target="_blank" rel="noopener noreferrer" data-i18n="联系">联系</a><button id="editToggle" aria-pressed="false" hidden data-i18n="编辑模式">编辑模式</button></nav>
+  <button type="button" class="lang-toggle" id="languageToggle" data-lang="zh" aria-label="Switch to English" title="Switch to English">
+    <svg class="lang-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M22.401 4.818h-9.927L10.927 0H1.599C.72 0 .002.719.002 1.599v16.275c0 .878.72 1.597 1.597 1.597h10L13.072 24H22.4c.878 0 1.597-.707 1.597-1.572V6.39c0-.865-.72-1.572-1.597-1.572zm-15.66 8.68c-2.07 0-3.75-1.68-3.75-3.75 0-2.07 1.68-3.75 3.75-3.75 1.012 0 1.86.375 2.512.976l-.99.952a2.194 2.194 0 0 0-1.522-.584c-1.305 0-2.363 1.08-2.363 2.409S5.436 12.16 6.74 12.16c1.507 0 2.13-1.08 2.19-1.808l-2.188-.002V9.066h3.51c.05.23.09.457.09.764 0 2.147-1.434 3.669-3.602 3.669zm16.757 8.93c0 .59-.492 1.072-1.097 1.072h-8.875l3.649-4.03h.005l-.74-2.302.006-.005s.568-.488 1.277-1.24c.712.771 1.63 1.699 2.818 2.805l.771-.772c-1.272-1.154-2.204-2.07-2.89-2.805.919-1.087 1.852-2.455 2.049-3.707h2.034v.002h.002v-.94h-4.532v-1.52h-1.471v1.52H14.3l-1.672-5.21.006.022h9.767c.605 0 1.097.48 1.097 1.072v16.038zm-6.484-7.311c-.536.548-.943.873-.943.873l-.008.004-1.46-4.548h4.764c-.307 1.084-.988 2.108-1.651 2.904-1.176-1.392-1.18-1.844-1.18-1.844h-1.222s.05.678 1.7 2.61z"/></svg>
+    <span class="lang-options" aria-hidden="true"><span class="lang-thumb"></span><span class="opt" data-opt="en">EN</span><span class="opt" data-opt="zh">中</span></span>
+  </button></div>
 </header>
 
 <!-- 地图 -->
-<section class="atlas" aria-label="拍摄地点地图">
-  <div class="edge top"><span id="edgeYears">IGNAT ATLAS</span><span class="muted">底片上的世界</span><span id="edgeCount"></span></div>
+<section class="atlas" aria-label="拍摄地点地图" data-i18n-aria-label="拍摄地点地图">
+  <div class="edge top"><span id="edgeYears">IGNAT ATLAS</span><span class="muted" data-i18n="底片上的世界">底片上的世界</span><span id="edgeCount"></span></div>
   <div class="map" id="map">
     <canvas id="mapCanvas" width="2400" height="1144" aria-hidden="true"></canvas>
     <svg id="mapSvg"></svg>
-    <div class="loading" id="mapLoading">正在冲洗地图……</div>
-    <div class="title"><h1>Places<br>&amp; Frames</h1><p>走过的地方，拍下的底片</p></div>
+    <div class="loading" id="mapLoading" data-i18n="正在冲洗地图……">正在冲洗地图……</div>
+    <div class="title"><h1>Places<br>&amp; Frames</h1><p data-i18n="走过的地方，拍下的底片">走过的地方，拍下的底片</p></div>
     <div class="tip" id="tip"></div>
   </div>
   <div class="edge bot"><span id="edgeCoord"></span></div>
@@ -31,78 +39,78 @@
 
 <!-- 国家 → 城市，类别独立筛选 -->
 <div class="bar" id="filters">
-  <div class="filter-row"><span class="filter-label">国家</span><div class="rolls" id="rolls" role="group" aria-label="按国家筛选"></div></div>
-  <div class="filter-row" id="cityRow" hidden><span class="filter-label">城市</span><div class="rolls" id="cities" role="group" aria-label="按城市筛选"></div></div>
+  <div class="filter-row"><span class="filter-label" data-i18n="国家">国家</span><div class="rolls" id="rolls" role="group" aria-label="按国家筛选" data-i18n-aria-label="按国家筛选"></div></div>
+  <div class="filter-row" id="cityRow" hidden><span class="filter-label" data-i18n="城市">城市</span><div class="rolls" id="cities" role="group" aria-label="按城市筛选" data-i18n-aria-label="按城市筛选"></div></div>
   <div class="filter-row filter-bottom">
-    <span class="filter-label">类别</span>
-    <div class="toggle" id="toggle" role="group" aria-label="按类别筛选">
-      <button data-type="all" aria-pressed="true">全部类别</button>
-      <button data-type="人文" aria-pressed="false">人文</button>
-      <button data-type="风景" aria-pressed="false">风景</button>
+    <span class="filter-label" data-i18n="类别">类别</span>
+    <div class="toggle" id="toggle" role="group" aria-label="按类别筛选" data-i18n-aria-label="按类别筛选">
+      <button data-type="all" aria-pressed="true" data-i18n="全部类别">全部类别</button>
+      <button data-type="人文" aria-pressed="false" data-i18n="人文">人文</button>
+      <button data-type="风景" aria-pressed="false" data-i18n="风景">风景</button>
     </div>
     <span class="filter-summary" id="filterSummary" role="status" aria-live="polite"></span>
-    <button class="filter-reset" id="filterReset" disabled>重置筛选</button>
+    <button class="filter-reset" id="filterReset" disabled data-i18n="重置筛选">重置筛选</button>
   </div>
 </div>
 
 <!-- 印样：按拍摄时间排 -->
-<main class="sheet" id="sheet"><div class="empty">正在读取照片……</div></main>
-<footer><span>按拍摄时间排列，没有日期的照片排在最后。</span><span>© Ignat</span></footer>
+<main class="sheet" id="sheet"><div class="empty" data-i18n="正在读取照片……">正在读取照片……</div></main>
+<footer><span data-i18n="按拍摄时间排列，没有日期的照片排在最后。">按拍摄时间排列，没有日期的照片排在最后。</span><span>© Ignat</span></footer>
 
 <div class="loupe" id="loupe" aria-hidden="true"><div class="inner" id="loupeInner"></div></div>
 
 <!-- 取景器 -->
-<div class="vf" id="vf" role="dialog" aria-modal="true" aria-label="全屏看图" aria-hidden="true">
+<div class="vf" id="vf" role="dialog" aria-modal="true" aria-label="全屏看图" data-i18n-aria-label="全屏看图" aria-hidden="true">
   <div class="bg" id="vfBg"></div>
   <img class="photo" id="vfPreview" alt="" hidden>
   <img class="photo" id="vfImg" alt="" hidden>
-  <div class="vstatus" id="vfStatus" role="status"><span id="vfLoadText"></span><button id="vfRetry" hidden>重新加载</button></div>
+  <div class="vstatus" id="vfStatus" role="status"><span id="vfLoadText"></span><button id="vfRetry" hidden data-i18n="重新加载">重新加载</button></div>
   <div class="frm" aria-hidden="true"><i></i><i></i><i></i><i></i><div class="af" id="vfAf"></div></div>
-  <div class="vtop"><span><span id="vfRoll"></span><span class="filt" id="vfFilt"></span></span><button class="vclose" id="vfClose">关闭（Esc）</button></div>
-  <button class="zone prev" id="vfPrev" aria-label="上一张"></button>
-  <button class="zone next" id="vfNext" aria-label="下一张"></button>
-  <div class="hint">← → 翻页　F 铺满</div>
+  <div class="vtop"><span><span id="vfRoll"></span><span class="filt" id="vfFilt"></span></span><button class="vclose" id="vfClose" data-i18n="关闭（Esc）">关闭（Esc）</button></div>
+  <button class="zone prev" id="vfPrev" aria-label="上一张" data-i18n-aria-label="上一张"></button>
+  <button class="zone next" id="vfNext" aria-label="下一张" data-i18n-aria-label="下一张"></button>
+  <div class="hint" data-i18n="← → 翻页　F 铺满">← → 翻页　F 铺满</div>
   <div class="lcd">
     <div class="cap"><h2><span id="vfTitle"></span><span class="place" id="vfPlace"></span></h2><span class="count" id="vfCount"></span></div>
     <div class="readout">
-      <div><small>快门</small><strong id="vfS"></strong></div>
-      <div><small>光圈</small><strong id="vfF"></strong></div>
+      <div><small data-i18n="快门">快门</small><strong id="vfS"></strong></div>
+      <div><small data-i18n="光圈">光圈</small><strong id="vfF"></strong></div>
       <div><small>ISO</small><strong id="vfIso"></strong></div>
-      <div><small>焦距</small><strong id="vfMm"></strong></div>
+      <div><small data-i18n="焦距">焦距</small><strong id="vfMm"></strong></div>
       <div class="gear" id="vfGear"></div>
       <div class="mini" id="vfMini" hidden><img id="vfMiniImg" alt=""><i id="vfMiniDot"></i></div>
     </div>
   </div>
 
   <!-- 编辑面板：只在本地编辑服务器下出现，改动自动保存到 shared/photos.json -->
-  <aside class="ed" id="ed" hidden aria-label="编辑照片信息">
-    <div class="ed-h"><b>编辑这张</b><span id="edFile"></span></div>
+  <aside class="ed" id="ed" hidden aria-label="编辑照片信息" data-i18n-aria-label="编辑照片信息">
+    <div class="ed-h"><b data-i18n="编辑这张">编辑这张</b><span id="edFile"></span></div>
     <div class="ed-review" id="edReview" hidden>
-      <p>这张还在待审核。核对下面的标题、城市、类别和元数据（AI 推测的可能有错），没问题再通过。</p>
-      <button type="button" id="edApprove">审核通过，并入作品</button>
+      <p data-i18n="这张还在待审核。核对下面的标题、城市、类别和元数据（AI 推测的可能有错），没问题再通过。">这张还在待审核。核对下面的标题、城市、类别和元数据（AI 推测的可能有错），没问题再通过。</p>
+      <button type="button" id="edApprove" data-i18n="审核通过，并入作品">审核通过，并入作品</button>
     </div>
-    <label class="f"><span>标题</span><input data-k="title" placeholder="给这张起个名字"></label>
-    <div class="f"><span>城市</span><div class="chips" id="edCity" role="radiogroup" aria-label="城市"></div></div>
-    <div class="f"><span>类别</span><div class="chips" id="edType" role="radiogroup" aria-label="类别"></div></div>
-    <label class="f"><span>具体地点（可空）</span><input data-k="spot" placeholder="例如 红场"></label>
-    <label class="chk"><input type="checkbox" data-k="pick">用红笔圈出来（精选）</label>
+    <label class="f"><span data-i18n="标题">标题</span><input data-k="title" placeholder="给这张起个名字" data-i18n-placeholder="给这张起个名字"></label>
+    <div class="f"><span data-i18n="城市">城市</span><div class="chips" id="edCity" role="radiogroup" aria-label="城市" data-i18n-aria-label="城市"></div></div>
+    <div class="f"><span data-i18n="类别">类别</span><div class="chips" id="edType" role="radiogroup" aria-label="类别" data-i18n-aria-label="类别"></div></div>
+    <label class="f"><span data-i18n="具体地点（可空）">具体地点（可空）</span><input data-k="spot" placeholder="例如 红场" data-i18n-placeholder="例如 红场"></label>
+    <label class="chk"><input type="checkbox" data-k="pick"><span data-i18n="用红笔圈出来（精选）">用红笔圈出来（精选）</span></label>
     <div class="sep"></div>
-    <label class="f"><span>拍摄时间</span><input type="datetime-local" step="1" data-k="taken"></label>
+    <label class="f"><span data-i18n="拍摄时间">拍摄时间</span><input type="datetime-local" step="1" data-k="taken"></label>
     <div class="grid">
-      <label class="f"><span>快门</span><input data-k="s" placeholder="1/250"></label>
-      <label class="f"><span>光圈 F</span><input data-k="f" placeholder="4"></label>
+      <label class="f"><span data-i18n="快门">快门</span><input data-k="s" placeholder="1/250"></label>
+      <label class="f"><span data-i18n="光圈 F">光圈 F</span><input data-k="f" placeholder="4"></label>
       <label class="f"><span>ISO</span><input data-k="iso" data-num inputmode="numeric" placeholder="400"></label>
-      <label class="f"><span>焦距 mm</span><input data-k="mm" data-num inputmode="numeric" placeholder="50"></label>
+      <label class="f"><span data-i18n="焦距 mm">焦距 mm</span><input data-k="mm" data-num inputmode="numeric" placeholder="50"></label>
     </div>
-    <label class="f"><span>相机</span><input data-k="camera" list="dlCamera" placeholder="Nikon Z7 II"></label>
-    <label class="f"><span>镜头</span><input data-k="lens" list="dlLens" placeholder="NIKKOR Z 24-120mm f/4 S"></label>
+    <label class="f"><span data-i18n="相机">相机</span><input data-k="camera" list="dlCamera" placeholder="Nikon Z7 II"></label>
+    <label class="f"><span data-i18n="镜头">镜头</span><input data-k="lens" list="dlLens" placeholder="NIKKOR Z 24-120mm f/4 S"></label>
     <div class="grid">
-      <label class="f"><span>纬度</span><input data-k="lat" data-num inputmode="decimal" placeholder="55.75"></label>
-      <label class="f"><span>经度</span><input data-k="lon" data-num inputmode="decimal" placeholder="37.62"></label>
+      <label class="f"><span data-i18n="纬度">纬度</span><input data-k="lat" data-num inputmode="decimal" placeholder="55.75"></label>
+      <label class="f"><span data-i18n="经度">经度</span><input data-k="lon" data-num inputmode="decimal" placeholder="37.62"></label>
     </div>
     <datalist id="dlCamera"></datalist><datalist id="dlLens"></datalist>
     <div class="ed-s" id="edStatus" role="status"></div>
-    <p class="ed-tip">虚线框 = 原图里没有这项信息。改完自动保存；← → 翻页时会带着编辑面板。</p>
+    <p class="ed-tip" data-i18n="虚线框 = 原图里没有这项信息。改完自动保存；← → 翻页时会带着编辑面板。">虚线框 = 原图里没有这项信息。改完自动保存；← → 翻页时会带着编辑面板。</p>
   </aside>
 </div>
 
