@@ -1,3 +1,18 @@
+# 白名单写法：默认忽略根目录下的一切，只放行网站本体
+# 想新增要上传的根目录文件/文件夹，在下面加一行 !/名字
+/*
+!/.gitignore
+!/.gitattributes
+!/designs/
+
+# 以下不上传：
+# - AGENTS.md / CLAUDE.md（AI 助手约定）
+# - tools/（压图、本地编辑服务器）、backups/（数据备份）、.claude/（本机预览配置）
+# 都已被上面的 /* 忽略，留在本地照常使用
+
+# 网站里的照片（体积大，单独处理，不进 Git）
+/designs/photos/
+
 # 图片文件（不区分大小写，如 .JPG 也会被忽略）
 *.[jJ][pP][gG]
 *.[jJ][pP][eE][gG]
@@ -21,5 +36,16 @@
 *.[oO][rR][fF]
 *.[xX][mM][pP]
 
-# macOS 系统文件
+# 系统、编辑器、运行环境的杂项
 .DS_Store
+Thumbs.db
+__pycache__/
+*.py[cod]
+.venv/
+node_modules/
+.env
+.env.*
+*.tmp
+*.log
+.vscode/
+.idea/
