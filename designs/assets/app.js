@@ -211,51 +211,64 @@
     if (state.hot === name) return;
     state.hot = name; paintMap();
     if (name) showTip(name);
-    else { $("tip").classList.remove("on"); $("edgeCoord").textContent = "把鼠标放在亮起的国家上"; }
+    else { $("tip").classList.remove("on"); $("edgeCoord").textContent = ""; }
   }
 
   const mapEl = $("map");
   mapEl.addEventListener("pointerover", e => { const t = e.target.closest(".ctry"); hover(t ? t.dataset.country : null); });
   mapEl.addEventListener("pointerleave", () => hover(null));
   mapEl.addEventListener("click", e => { const t = e.target.closest(".ctry"); if (t) pickCountry(t.dataset.country, true); });
+  mapEl.addEventListener("focusout", () => hover(null));
   mapEl.addEventListener("focusin", e => { const t = e.target.closest(".ctry"); if (t) hover(t.dataset.country); });
-  mapEl.addEventListener("keydown", e => { const t = e.target.closest(".ctry"); if (t && e.key === "Enter") pickCountry(t.dataset.country, true); });
+  mapEl.addEventListener("keydown", e => { const t = e.target.closest(".ctry"); if (t && ["Enter", " "].includes(e.key)) { e.preventDefault(); pickCountry(t.dataset.country, true); } });
 
   /* ———————— 地区 + 类别筛选 ———————— */
   function renderBar() {
-    const multi = COUNTRIES.length > 1;
-    $("rolls").innerHTML = `<button data-all aria-pressed="${!state.country && !state.city}">全部<small>${ORDER.length}</small></button>` +
-      COUNTRIES.map(c => (multi
-        ? `<button data-country="${esc(c.name)}" aria-pressed="${state.country === c.name && !state.city}">${esc(c.name)}<small>${c.items.length}</small></button>`
-        : `<span class="cty">${esc(c.name)}</span>`) +
-        c.cities.map(city => `<button data-country="${esc(c.name)}" data-city="${esc(city)}" aria-pressed="${state.city === city && state.country === c.name}">${esc(city)}<small>${c.cityCounts.get(city) || 0}</small></button>`).join("")
-      ).join("");
-    regionButtons = [...$("rolls").querySelectorAll("button")];
+    $("rolls").innerHTML = `<button data-all aria-pressed="${!state.country}">全部国家<small>${ORDER.length}</small></button>` +
+      COUNTRIES.map(c => `<button data-country="${esc(c.name)}" aria-pressed="${state.country === c.name}">${esc(c.name)}<small>${c.items.length}</small></button>`).join("");
+    paintBar();
   }
   function paintBar() {
-    regionButtons.forEach(b => {
-      const pressed = b.dataset.all !== undefined ? !state.country && !state.city
-        : state.country === b.dataset.country && (b.dataset.city ? state.city === b.dataset.city : !state.city);
-      b.setAttribute("aria-pressed", pressed);
+    if (state.country && !COUNTRY_INFO.has(state.country)) state.country = state.city = null;
+    const c = COUNTRY_INFO.get(state.country);
+    if (state.city && !c?.items.some(p => p.city === state.city)) state.city = null;
+    LIT = null;
+    const count = list => list.filter(p => state.type === "all" || p.type === state.type).length;
+    $("rolls").querySelectorAll("button").forEach(b => {
+      b.setAttribute("aria-pressed", b.dataset.all !== undefined ? !state.country : state.country === b.dataset.country);
+      b.querySelector("small").textContent = count(b.dataset.all !== undefined ? ORDER : COUNTRY_INFO.get(b.dataset.country)?.items || []);
     });
+    $("cityRow").hidden = !c;
+    const cityHTML = c ? `<button data-city="" aria-pressed="${!state.city}">全部城市<small>${count(c.items)}</small></button>` +
+      c.cities.filter(city => c.cityCounts.get(city) > 0).map(city => `<button data-city="${esc(city)}" aria-pressed="${state.city === city}">${esc(city)}<small>${count(c.items.filter(p => p.city === city))}</small></button>`).join("") : "";
+    if ($("cities").innerHTML !== cityHTML) {
+      const active = document.activeElement;
+      const focusedCity = $("cities").contains(active) ? active.dataset.city : undefined;
+      $("cities").innerHTML = cityHTML;
+      if (focusedCity !== undefined) [...$("cities").querySelectorAll("button")].find(b => b.dataset.city === focusedCity)?.focus({ preventScroll: true });
+    }
+    regionButtons = [...$("rolls").querySelectorAll("button")];
+    document.querySelectorAll("#toggle button").forEach(b => b.setAttribute("aria-pressed", b.dataset.type === state.type));
+    $("filterSummary").textContent = `${[state.country || "全部国家", state.city, state.type !== "all" && state.type].filter(Boolean).join(" · ")} · ${litList().length} 张`;
+    $("filterReset").disabled = !state.country && !state.city && state.type === "all";
   }
   $("rolls").addEventListener("click", e => {
     const b = e.target.closest("button"); if (!b) return;
-    if (b.dataset.all !== undefined) { state.country = state.city = null; }
-    else if (b.dataset.city) {
-      const same = state.city === b.dataset.city && state.country === b.dataset.country;
-      state.country = same ? null : b.dataset.country; state.city = same ? null : b.dataset.city;
-    } else { pickCountry(b.dataset.country, false); return; }
+    pickCountry(b.dataset.country || null, false);
+  });
+  $("cities").addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    state.city = b.dataset.city || null;
     applyFilter();
   });
   $("rolls").addEventListener("pointerover", e => { const b = e.target.closest("button[data-country]"); state.hot = b ? b.dataset.country : null; paintMap(); });
   $("rolls").addEventListener("pointerleave", () => { state.hot = null; paintMap(); });
 
   function pickCountry(name, jump) {
-    const same = state.country === name && !state.city;
-    state.country = same ? null : name; state.city = null;
+    state.country = name; state.city = null;
+    hover(null);
     applyFilter();
-    if (jump && !same) $("sheet").scrollIntoView({ block: "start", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+    if (jump) $("filters").scrollIntoView({ block: "start", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
   }
 
   $("toggle").addEventListener("click", e => {
@@ -263,16 +276,17 @@
     state.type = b.dataset.type;
     applyFilter();
   });
+  $("filterReset").addEventListener("click", () => {
+    state.country = state.city = null; state.type = "all";
+    hover(null);
+    applyFilter();
+    $("rolls").querySelector("[data-all]").focus({ preventScroll: true });
+  });
 
-  // 符合条件的亮着，其余压暗
   function applyFilter() {
     LIT = null;
     paintBar(); paintMap();
-    document.querySelectorAll("#toggle button").forEach(x => x.setAttribute("aria-pressed", x.dataset.type === state.type));
-    frames.forEach(f => {
-      const p = byId(f.dataset.id);
-      f.classList.toggle("off", !!p && !p.review && !isLit(p));
-    });
+    renderSheet();
   }
 
   /* ———————— 印样 ———————— */
@@ -314,7 +328,8 @@
   }
 
   function renderSheet() {
-    const nCity = new Set(ORDER.map(p => p.city).filter(Boolean)).size;
+    const list = litList();
+    const nCity = new Set(list.filter(p => p.city).map(p => `${p.country}/${p.city}`)).size;
     const pending = canEdit && PEND.length ? `
       <section class="pending" aria-label="待审核">
         <div class="sheet-head">
@@ -325,10 +340,10 @@
       </section>` : "";
     $("sheet").innerHTML = pending + `
       <div class="sheet-head">
-        <h2>Proof ${years(ORDER)}<small>${nCity} 个地方，${ORDER.length} 张</small></h2>
-        <span class="note"><svg viewBox="0 0 26 16"><path d="M2 3 C8 1 18 1 24 3 C25 7 25 10 23 14 C16 15 8 15 3 13 C1 9 1 6 3 2" fill="none" stroke="#c9302a" stroke-width="2"/></svg>红笔框的是精选；点任意一格全屏看</span>
+        <h2>Proof ${years(list)}<small>${nCity} 个地方，${list.length} 张</small></h2>
+
       </div>
-      <div class="strips">${stripsHTML(ORDER)}</div>`;
+      <div class="strips">${list.length ? stripsHTML(list) : '<div class="empty">当前条件下没有照片，可切换类别、城市或重置筛选。</div>'}</div>`;
     frames = [...$("sheet").querySelectorAll(".frame[data-id]")];
     hideLoupe();
     sheetDirty = false;
@@ -382,7 +397,7 @@
     $("vfRoll").innerHTML = `<b>${esc(p.country)}</b>　${esc(p.city || "城市待补")}　▸ ${p.review ? "待审核 " : ""}第 ${ORD.get(p) + 1} 张`;
     $("vfFilt").textContent = p.review ? "只翻待审核的"
       : state.country || state.city || state.type !== "all"
-      ? `只翻亮着的：${[state.city || state.country, state.type !== "all" && state.type].filter(Boolean).join(" · ")}` : "";
+      ? `当前筛选：${[state.city || state.country, state.type !== "all" && state.type].filter(Boolean).join(" · ")}` : "";
     $("vfTitle").textContent = p.title || "（未命名）";
     $("vfPlace").textContent = [[p.city, p.spot].filter(Boolean).join(" · "), when(p), p.type].filter(Boolean).join("　");
     $("vfCount").textContent = `${i >= 0 ? pad(i + 1) : "—"} / ${pad(lit.length)}`;
@@ -486,7 +501,7 @@
     }).catch(failed);
   }
 
-  // 翻页只在亮着的照片里走；如果点开的是暗掉的那张，就跳到它前后最近的亮着的
+  // 只在当前筛选结果里翻页；编辑后不再匹配时，跳到前后最近的结果
   function step(dir) {
     const lit = navList(cur);
     if (!lit.length || !cur) return;
@@ -513,7 +528,7 @@
     vf.setAttribute("aria-busy", "false");
     clearViewerImages();
     viewerStatus("");
-    if (sheetDirty) { renderSheet(); applyFilter(); }
+    if (sheetDirty) applyFilter();
     const f = cur && frames.find(f => f.dataset.id === cur.id);
     if (f) { f.scrollIntoView({ block: "nearest", behavior: "instant" }); f.classList.remove("flash"); void f.offsetWidth; f.classList.add("flash"); }
     const focus = f?.querySelector(".win") || lastFocus;
@@ -676,7 +691,7 @@
       if (!j || !j.ok) return;
       canEdit = true;
       $("editToggle").hidden = false;
-      if (PEND.length) { renderSheet(); applyFilter(); }
+      if (PEND.length) applyFilter();
       let saved = false; try { saved = localStorage.getItem("ignat-edit") === "1"; } catch {}
       setEditing(saved);
     }).catch(() => {});

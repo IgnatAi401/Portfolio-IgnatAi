@@ -13,7 +13,7 @@
 <body>
 <header class="top">
   <div class="brand">IGNAT</div>
-  <nav><a href="#" aria-current="page">作品</a><a href="#">关于</a><a href="#">联系</a><button id="editToggle" aria-pressed="false" hidden>编辑模式</button></nav>
+  <nav><a href="#" aria-current="page">作品</a><a href="#">关于</a><a href="https://me.ignat.ai" target="_blank" rel="noopener noreferrer">联系</a><button id="editToggle" aria-pressed="false" hidden>编辑模式</button></nav>
 </header>
 
 <!-- 地图 -->
@@ -26,16 +26,22 @@
     <div class="title"><h1>Places<br>&amp; Frames</h1><p>走过的地方，拍下的底片</p></div>
     <div class="tip" id="tip"></div>
   </div>
-  <div class="edge bot"><span id="edgeCoord">把鼠标放在亮起的国家上</span><span class="muted">点击跳到印样</span></div>
+  <div class="edge bot"><span id="edgeCoord"></span></div>
 </section>
 
-<!-- 地区 + 类别：符合条件的亮着，其余压暗 -->
-<div class="bar">
-  <div class="rolls" id="rolls" role="group" aria-label="按地区筛选"></div>
-  <div class="toggle" id="toggle" role="group" aria-label="按类别筛选">
-    <button data-type="all" aria-pressed="true">全部</button>
-    <button data-type="人文" aria-pressed="false">人文</button>
-    <button data-type="风景" aria-pressed="false">风景</button>
+<!-- 国家 → 城市，类别独立筛选 -->
+<div class="bar" id="filters">
+  <div class="filter-row"><span class="filter-label">国家</span><div class="rolls" id="rolls" role="group" aria-label="按国家筛选"></div></div>
+  <div class="filter-row" id="cityRow" hidden><span class="filter-label">城市</span><div class="rolls" id="cities" role="group" aria-label="按城市筛选"></div></div>
+  <div class="filter-row filter-bottom">
+    <span class="filter-label">类别</span>
+    <div class="toggle" id="toggle" role="group" aria-label="按类别筛选">
+      <button data-type="all" aria-pressed="true">全部类别</button>
+      <button data-type="人文" aria-pressed="false">人文</button>
+      <button data-type="风景" aria-pressed="false">风景</button>
+    </div>
+    <span class="filter-summary" id="filterSummary" role="status" aria-live="polite"></span>
+    <button class="filter-reset" id="filterReset" disabled>重置筛选</button>
   </div>
 </div>
 
