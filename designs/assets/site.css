@@ -118,7 +118,7 @@
   .loupe .inner { position: absolute; transform-origin: 0 0; }
 
   .empty { padding: 60px 0; text-align: center; color: var(--ink-dim); font-size: 14px; }
-  footer { padding: 8px var(--gutter) 48px; display: flex; justify-content: space-between; color: var(--ink-dim); font-size: 13px; }
+  footer { padding: 8px var(--gutter) 48px; display: flex; justify-content: flex-end; color: var(--ink-dim); font-size: 13px; }
 
   /* ———— 取景器（点开后的全屏模式） ———— */
   .vf { --lcd: 150px; display: none; position: fixed; inset: 0; z-index: 40; overflow: hidden; contain: layout paint; background: #000; color: rgba(255,255,255,.92); }

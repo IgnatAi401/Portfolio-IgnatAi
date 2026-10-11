@@ -15,7 +15,7 @@ const I18N = (() => {
     "全部国家": "All countries", "全部城市": "All cities", "全部类别": "All categories",
     "人文": "People & culture", "风景": "Landscape", "重置筛选": "Reset filters",
     "正在读取照片……": "Loading photographs…",
-    "按拍摄时间排列，没有日期的照片排在最后。": "In chronological order. Undated photographs appear last.",
+    "© Ignat · 所有照片由 Ignat 拍摄，未经允许禁止商用。": "© Ignat · All photographs by Ignat. Commercial use without permission is prohibited.",
     "全屏看图": "Photo viewer", "重新加载": "Retry", "关闭（Esc）": "Close (Esc)",
     "上一张": "Previous photo", "下一张": "Next photo", "← → 翻页　F 铺满": "← → Browse · F Fill screen",
     "快门": "Shutter", "光圈": "Aperture", "焦距": "Focal length",
