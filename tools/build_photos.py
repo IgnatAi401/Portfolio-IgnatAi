@@ -7,7 +7,7 @@
 用法（在项目根目录）：
     uv run tools/build_photos.py ~/Desktop/俄罗斯 --slug russia --country 俄罗斯
 
-- 大图：长边 2560px（全景图 4096px），WebP 质量 80（全屏看图用）
+- 大图：保持原图分辨率，WebP 质量 75（全屏看图用）
 - 小图：长边 800px，WebP 质量 72（印样和放大镜用）
 - 输出的图片不带任何 EXIF/GPS，颜色统一转成 sRGB
 - photos.json 里已经有的照片只更新尺寸，不覆盖你改过的标题、城市等信息；原图里没有的信息留空
@@ -26,8 +26,7 @@ import photodata
 Image.MAX_IMAGE_PIXELS = None
 
 SITE = photodata.SITE
-FULL_LONG, FULL_Q = 2560, 80
-PANO_LONG = 4096
+FULL_Q = 75
 THUMB_LONG, THUMB_Q = 800, 72
 SRGB = ImageCms.createProfile("sRGB")
 
@@ -95,15 +94,11 @@ def process(job):
     with Image.open(src) as im:
         meta = read_meta(im)
         if force or not (full.exists() and thumb.exists()):
-            im.draft("RGB", (FULL_LONG, FULL_LONG))
             im = to_srgb(ImageOps.exif_transpose(im))
-            w, h = im.size
-            # 全景图长边放宽，不然短边太小
-            big = fit(im, FULL_LONG if max(w, h) / min(w, h) < 2 else PANO_LONG)
             full.parent.mkdir(parents=True, exist_ok=True)
             thumb.parent.mkdir(parents=True, exist_ok=True)
-            big.save(full, "WEBP", quality=FULL_Q, method=5)
-            fit(big, THUMB_LONG).save(thumb, "WEBP", quality=THUMB_Q, method=5)
+            im.save(full, "WEBP", quality=FULL_Q, method=5)
+            fit(im, THUMB_LONG).save(thumb, "WEBP", quality=THUMB_Q, method=5)
         with Image.open(full) as done:
             w, h = done.size
     return {"id": f"{slug}-{src.stem}", "src": name, "w": w, "h": h, **meta}
@@ -115,9 +110,13 @@ def main():
     ap.add_argument("--slug", required=True, help="英文目录名，例如 russia")
     ap.add_argument("--country", required=True, help="国家中文名，例如 俄罗斯")
     ap.add_argument("--force", action="store_true", help="已压过的图也重新压")
+    ap.add_argument("--known-only", action="store_true", help="只处理 photos.json 里已有的照片（跳过删掉的多余照片）")
     a = ap.parse_args()
 
     files = sorted(p for p in a.folder.expanduser().iterdir() if p.suffix.lower() in (".jpg", ".jpeg", ".png"))
+    if a.known_only:
+        ids = {p["id"] for p in photodata.load()["photos"]}
+        files = [p for p in files if f"{a.slug}-{p.stem}" in ids]
     with ProcessPoolExecutor() as pool:
         results = list(pool.map(process, [(p, a.slug, a.force) for p in files]))
 
