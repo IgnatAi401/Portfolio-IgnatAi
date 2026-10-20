@@ -885,7 +885,9 @@
     paintViewer(p);
     syncEditor();
     $("vfAf").classList.remove("lock", "fail");
-    void $("vfAf").offsetWidth; // 缓存命中时大图几乎立刻到，先强制重排，合焦动画才会重播
+    $("vfAf").style.animation = "none";
+    void $("vfAf").offsetWidth; // 强制重排：每换一张都从大框重新收小，缓存命中时合焦动画也能重播
+    $("vfAf").style.animation = "";
     vf.setAttribute("aria-busy", "true");
     viewerStatus("正在加载照片……");
 

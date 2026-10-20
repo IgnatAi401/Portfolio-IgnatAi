@@ -261,17 +261,16 @@
   .vf .frm i:nth-child(2) { right: 0; top: 0; border-right-width: 1px; border-top-width: 1px; }
   .vf .frm i:nth-child(3) { left: 0; bottom: 0; border-left-width: 1px; border-bottom-width: 1px; }
   .vf .frm i:nth-child(4) { right: 0; bottom: 0; border-right-width: 1px; border-bottom-width: 1px; }
-  /* 对焦点：加载中红框来回“拉风箱”找焦，大图到了变绿闪两下合焦，然后淡出不挡图 */
-  .vf .af { position: absolute; left: 50%; top: 50%; width: 34px; height: 24px; transform: translate(-50%, -50%); border: 1.5px solid #ff3b30; box-shadow: 0 0 6px rgba(255,59,48,.55), inset 0 0 4px rgba(255,59,48,.35); animation: af-hunt .8s ease-in-out infinite; }
+  /* 对焦点：加载中红框从大框慢慢收小到原尺寸，大图到了变绿闪两下合焦，然后淡出不挡图 */
+  .vf .af { position: absolute; left: 50%; top: 50%; width: 34px; height: 24px; transform: translate(-50%, -50%); border: 1.5px solid #ff3b30; box-shadow: 0 0 6px rgba(255,59,48,.55), inset 0 0 4px rgba(255,59,48,.35); animation: af-hunt 1.8s cubic-bezier(.2,.6,.3,1) forwards; }
   .vf .af.lock { border-color: #34e05a; box-shadow: 0 0 8px rgba(52,224,90,.6), inset 0 0 4px rgba(52,224,90,.35); animation: af-lock .9s ease-out forwards; }
   .vf .af.fail { animation: af-fail 1.2s ease-in forwards; }
   @keyframes af-hunt {
-    0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-    50% { transform: translate(-50%, -50%) scale(1.22); opacity: .6; }
+    0% { transform: translate(-50%, -50%) scale(1.8); opacity: .6; }
+    100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
   }
   @keyframes af-lock {
-    0% { transform: translate(-50%, -50%) scale(1.12); opacity: 1; }
-    14% { transform: translate(-50%, -50%) scale(1); }
+    0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
     28% { opacity: .25; } 40% { opacity: 1; } 52% { opacity: .25; } 64% { opacity: 1; }
     80% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
     100% { transform: translate(-50%, -50%) scale(1); opacity: 0; visibility: hidden; }
