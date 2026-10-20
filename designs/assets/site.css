@@ -20,7 +20,7 @@
   /* 静态小块纹理，避免固定混合层在滚动时重绘整屏。 */
   body, .atlas, .sheet { background-image: var(--grain); }
   button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
-  :focus-visible { outline: 1px dashed var(--edge); outline-offset: 3px; }
+  :focus, :focus-visible { outline: none; }
 
   /* ———— 顶栏 ———— */
   .top { display: flex; justify-content: space-between; align-items: center; gap: 24px; padding: 22px var(--gutter); }
@@ -45,7 +45,6 @@
   .ctry path { fill: transparent; stroke: transparent; stroke-linejoin: round; transition: fill .25s, stroke .25s, filter .25s; }
   .ctry .hit { fill: transparent; }
   .ctry.hot path { fill: #f3c374; stroke: #fff1d6; stroke-width: 1; filter: drop-shadow(0 0 10px rgba(243, 195, 116, .75)); }
-  .ctry:focus-visible path { stroke: #fff1d6; stroke-width: 1; stroke-dasharray: 3 3; }
 
   .title { position: absolute; left: 0; bottom: 4%; pointer-events: none; }
   .title h1 { font-family: var(--head); font-weight: 800; font-size: clamp(44px, 6.4vw, 104px); line-height: .86; text-transform: uppercase; letter-spacing: -.005em; }
@@ -316,7 +315,6 @@
   .chips input { position: absolute; opacity: 0; pointer-events: none; }
   .chips span, .chips button { display: inline-block; padding: 6px 11px; border: 1px solid #3a342d; color: var(--ink-dim); font-size: 13px; }
   .chips input:checked + span { background: var(--ink); color: var(--film); border-color: var(--ink); }
-  .chips input:focus-visible + span { outline: 1px dashed var(--edge); outline-offset: 2px; }
   .chips button { border-style: dashed; }
   .ed .chk { display: flex; align-items: center; gap: 8px; margin: 2px 0 14px; cursor: pointer; }
   .ed .chk input { accent-color: var(--grease); width: 15px; height: 15px; }
