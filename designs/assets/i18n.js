@@ -17,7 +17,7 @@ const I18N = (() => {
     "正在读取照片……": "Loading photographs…",
     "© Ignat · 所有照片由 Ignat 拍摄，未经允许禁止商用。": "© Ignat · All photographs by Ignat. Commercial use without permission is prohibited.",
     "全屏看图": "Photo viewer", "播放实况": "Play Live Photo", "重新加载": "Retry", "关闭（Esc）": "Close (Esc)",
-    "上一张": "Previous photo", "下一张": "Next photo", "← → 翻页　F 铺满": "← → Browse · F Fill screen",
+    "上一张": "Previous photo", "下一张": "Next photo", "← → 翻页　F 铺满　滚轮缩放": "← → Browse · F Fill screen · Scroll to zoom",
     "快门": "Shutter", "光圈": "Aperture", "焦距": "Focal length",
     "编辑照片信息": "Edit photo details", "编辑这张": "Edit this photo",
     "这张还在待审核。核对下面的标题、城市、类别和元数据（AI 推测的可能有错），没问题再通过。": "This photo is pending review. Check its title, city, category and metadata before approving. AI estimates may be incorrect.",

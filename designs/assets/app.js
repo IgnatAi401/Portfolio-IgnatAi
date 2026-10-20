@@ -820,6 +820,9 @@
   }
 
   let viewerRequest = 0, viewerLoadTimer = null, viewerImages = [];
+  // 大图缩放状态：倍数、平移、正在按着的手指/鼠标、手势起点（逻辑在下面「缩放」一节）
+  let zk = 1, zx = 0, zy = 0, gestured = false, g0 = null;
+  const pts = new Map();
   function cancelViewerLoad() {
     viewerRequest++;
     clearTimeout(viewerLoadTimer);
@@ -877,6 +880,7 @@
     if (!p) return;
     cancelViewerLoad();
     cur = p;
+    zoomReset();
     clearViewerImages();
     paintViewer(p);
     syncEditor();
@@ -956,6 +960,7 @@
     vf.setAttribute("aria-hidden", "true");
     vf.setAttribute("aria-busy", "false");
     clearViewerImages();
+    zoomReset();
     viewerStatus("");
     if (sheetDirty) applyFilter();
     const f = cur && frames.find(f => f.dataset.id === cur.id);
@@ -985,14 +990,106 @@
     if (e.key.toLowerCase() === "f") {
       e.preventDefault();
       cover = !cover;
+      zoomReset();
       for (const id of ["vfPreview", "vfImg"]) $(id).classList.toggle("cover", cover);
       vf.querySelector("video.live-clip")?.classList.toggle("cover", cover);
       placeLive();
     }
   });
   let x0 = null;
-  vf.addEventListener("touchstart", e => { x0 = e.target.closest(".ed") ? null : e.touches[0].clientX; }, { passive: true });
+  vf.addEventListener("touchstart", e => { x0 = e.target.closest(".ed") || e.touches.length > 1 || zk > 1 ? null : e.touches[0].clientX; }, { passive: true });
   vf.addEventListener("touchend", e => { if (x0 === null) return; const dx = e.changedTouches[0].clientX - x0; if (Math.abs(dx) > 50) step(dx < 0 ? 1 : -1); x0 = null; });
+
+  // 缩放：电脑用滚轮（触控板双指捏合也走这里），手机双指捏合；放大后单指/鼠标拖着移动，双击复原。
+  // 照片、预览和实况视频共用 vf 上的 --zx/--zy/--zk，换图时不用再追着节点改样式。
+  function zoomApply() {
+    vf.style.setProperty("--zx", zx + "px");
+    vf.style.setProperty("--zy", zy + "px");
+    vf.style.setProperty("--zk", zk);
+    vf.classList.toggle("zoomed", zk > 1);
+  }
+  function zoomReset() { zk = 1; zx = zy = 0; g0 = null; pts.clear(); zoomApply(); }
+  // 照片画面（不含留白）在未缩放时的位置，算法同 placeLive，铺满模式按 cover 算
+  function zoomContent() {
+    const img = $("vfImg").hidden ? $("vfPreview") : $("vfImg");
+    if (!cur || img.hidden) return null;
+    const cs = getComputedStyle(img), pl = parseFloat(cs.paddingLeft), pt = parseFloat(cs.paddingTop);
+    const bw = img.clientWidth - pl - parseFloat(cs.paddingRight), bh = img.clientHeight - pt - parseFloat(cs.paddingBottom);
+    const k = (cover ? Math.max : Math.min)(bw / cur.w, bh / cur.h);
+    return { x: pl + (bw - cur.w * k) / 2, y: pt + (bh - cur.h * k) / 2, w: cur.w * k, h: cur.h * k };
+  }
+  // 比屏幕大时边缘不能拖进屏幕里；比屏幕小时不能拖出屏幕
+  // 最多放到原图像素的 2 倍（至少 4 倍）
+  function zoomK(k) {
+    const c = zoomContent();
+    return c ? Math.min(Math.max(k, 1), Math.max(4, cur.w / c.w * 2)) : 1;
+  }
+  function zoomTo(k, tx, ty) {
+    const c = zoomContent();
+    if (!c) return;
+    zk = zoomK(k);
+    const lim = (t, a, len, view) => { const lo = -zk * a, hi = view - zk * (a + len); return Math.min(Math.max(t, Math.min(lo, hi)), Math.max(lo, hi)); };
+    zx = zk === 1 ? 0 : lim(tx, c.x, c.w, vf.clientWidth);
+    zy = zk === 1 ? 0 : lim(ty, c.y, c.h, vf.clientHeight);
+    zoomApply();
+  }
+  // 以屏幕上的 (px, py) 为中心缩放，这一点下的画面保持不动
+  function zoomAt(k, px, py) {
+    const r = vf.getBoundingClientRect(), x = px - r.left, y = py - r.top;
+    k = zoomK(k);
+    zoomTo(k, x - (x - zx) * k / zk, y - (y - zy) * k / zk);
+  }
+  const zoomSkip = e => e.target.closest(".ed, .vtop, .vlive, .vstatus");
+  vf.addEventListener("wheel", e => {
+    if (zoomSkip(e) || !cur) return;
+    e.preventDefault();
+    const d = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
+    zoomAt(zk * Math.exp(-d * (e.ctrlKey ? 0.01 : 0.002)), e.clientX, e.clientY);
+  }, { passive: false });
+  vf.addEventListener("pointerdown", e => {
+    if (zoomSkip(e) || (e.pointerType === "mouse" && e.button !== 0)) return;
+    if (pts.size === 0) gestured = false;
+    pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pts.size === 2 || zk > 1) { try { vf.setPointerCapture(e.pointerId); } catch {} }
+    zoomStart();
+  });
+  function zoomStart() {
+    const [a, b] = [...pts.values()];
+    if (b) g0 = { d: Math.hypot(b.x - a.x, b.y - a.y) || 1, mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2, k: zk, x: zx, y: zy };
+    else if (a) g0 = { mx: a.x, my: a.y, k: zk, x: zx, y: zy };
+    else g0 = null;
+  }
+  vf.addEventListener("pointermove", e => {
+    const q = pts.get(e.pointerId);
+    if (!q || !g0) return;
+    q.x = e.clientX; q.y = e.clientY;
+    const [a, b] = [...pts.values()];
+    if (b && g0.d) {
+      const r = vf.getBoundingClientRect(), mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      const k = zoomK(g0.k * Math.hypot(b.x - a.x, b.y - a.y) / g0.d);
+      // 捏合开始时两指中点下的那一点，跟着手指中点走
+      const ox = g0.mx - r.left, oy = g0.my - r.top;
+      zoomTo(k, mx - r.left - (ox - g0.x) * k / g0.k, my - r.top - (oy - g0.y) * k / g0.k);
+      gestured = true;
+    } else if (!b && zk > 1) {
+      const dx = a.x - g0.mx, dy = a.y - g0.my;
+      if (!gestured && Math.hypot(dx, dy) < 4) return;
+      zoomTo(zk, g0.x + dx, g0.y + dy);
+      gestured = true;
+    }
+  });
+  const zoomEnd = e => {
+    if (!pts.delete(e.pointerId)) return;
+    zoomStart(); // 两指松开一指后接着单指拖，从当前位置重新算
+  };
+  vf.addEventListener("pointerup", zoomEnd);
+  vf.addEventListener("pointercancel", zoomEnd);
+  // 拖动/捏合结束时浏览器还会补发一次 click，别让它触发翻页
+  vf.addEventListener("click", e => { if (gestured) { gestured = false; e.stopPropagation(); e.preventDefault(); } }, true);
+  vf.addEventListener("dblclick", e => { if (zk > 1 && !zoomSkip(e)) zoomReset(); });
+  // iOS Safari 自带的整页捏合缩放
+  vf.addEventListener("gesturestart", e => e.preventDefault());
+  addEventListener("resize", () => { if (zk > 1) zoomTo(zk, zx, zy); });
 
   /* ———————— 编辑模式（临时）：只有用 tools/serve.py 打开时才有 ———————— */
   let editing = false;

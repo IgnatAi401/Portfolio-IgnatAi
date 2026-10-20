@@ -238,6 +238,13 @@
   .vf .bg { position: absolute; inset: -20px; background-size: cover; background-position: center; filter: blur(20px) brightness(.25) saturate(1.2); }
   .vf .photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; padding: 70px 72px calc(var(--lcd) + 28px); }
   .vf .photo[hidden] { display: none; }
+  .vf .photo, .vf .live-clip { transform-origin: 0 0; transform: translate(var(--zx, 0px), var(--zy, 0px)) scale(var(--zk, 1)); }
+  .vf { touch-action: none; }
+  .vf .ed { touch-action: pan-y; }
+  .vf.zoomed .zone { pointer-events: none; }
+  .vf.zoomed { cursor: grab; }
+  .vf.zoomed:active { cursor: grabbing; }
+  .vf.zoomed .vlive, .vf.zoomed .frm { display: none; }
   .vf .photo.cover { object-fit: cover; padding: 0; }
   .vf .live-clip { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; padding: 70px 72px calc(var(--lcd) + 28px); opacity: 0; transition: opacity .35s; pointer-events: none; }
   .vf .live-clip.cover { object-fit: cover; padding: 0; }
