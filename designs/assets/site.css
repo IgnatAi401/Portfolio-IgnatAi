@@ -113,6 +113,119 @@
   .mark { position: absolute; inset: 22px 0; width: 100%; height: calc(100% - 44px); pointer-events: none; overflow: visible; }
   .mark path { fill: none; stroke: var(--grease); stroke-width: 3; stroke-linecap: round; opacity: .85; }
 
+  .rolls button.none { color: var(--ink-dim); opacity: .5; }
+  .filter-label[hidden], .toggle[hidden] { display: none; }
+
+  /* ———— 故事卡片：一篇一张，像贴在底片袋上的样片；图多图少、字多字少都行，瀑布流排列 ———— */
+  .stories { display: flex; align-items: flex-start; gap: 22px; margin-top: 20px; }
+  .scol { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 22px; }
+  .story { position: relative; display: flex; flex-direction: column; background: var(--rebate); padding: 26px 10px 14px; transition: transform .25s, box-shadow .25s; }
+  .story::before { content: ""; position: absolute; left: 0; right: 0; top: 4px; height: 7px; background: repeating-linear-gradient(90deg, transparent 0 7px, var(--hole) 7px 15px, transparent 15px 22px); }
+  .story { cursor: pointer; }
+  .story:hover { transform: translateY(-3px); box-shadow: 0 18px 36px rgba(0,0,0,.5); }
+  .slink { color: inherit; text-decoration: none; transition: color .2s; }
+  .story:hover .slink { color: var(--edge); }
+  .story:hover .smore { letter-spacing: .04em; }
+  .sedge { position: absolute; left: 12px; right: 12px; top: 13px; display: flex; justify-content: space-between; gap: 10px; font-family: var(--mono); font-size: 9.5px; color: var(--edge); white-space: nowrap; }
+  .sedge span:nth-child(2) { overflow: hidden; text-overflow: ellipsis; }
+  /* 图片区：一行行排，同一行按宽高比（--r）分宽度，所以整行等高 */
+  .smedia { display: grid; gap: 3px; }
+  .srow { display: flex; gap: 3px; }
+  .shot { position: relative; display: block; flex: var(--r) 1 0; min-width: 0; aspect-ratio: var(--r); padding: 0; background: #000; overflow: hidden; cursor: zoom-in; }
+  .shot img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform .5s cubic-bezier(.22, 1, .36, 1), opacity .3s; }
+  .shot:hover img { transform: scale(1.04); }
+  .srest { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(7, 6, 6, .55); font-family: var(--head); font-size: 30px; font-weight: 500; color: var(--ink); pointer-events: none; }
+  /* 实况照片：角上的 LIVE 标记；视频叠在静态图上，播放时淡入 */
+  .shot video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: transform .5s cubic-bezier(.22, 1, .36, 1), opacity .35s; pointer-events: none; }
+  .shot:hover video { transform: scale(1.04); }
+  .shot.playing video { opacity: 1; }
+  .lbadge { position: absolute; left: 7px; top: 7px; z-index: 1; display: flex; align-items: center; gap: 5px; padding: 2px 6px 2px 4px; background: rgba(0,0,0,.45); color: #fff; font-family: var(--mono); font-size: 9px; letter-spacing: .12em; line-height: 1.4; pointer-events: none; }
+  .lbadge::before, .vf .vlive::before { content: ""; width: 9px; height: 9px; box-sizing: border-box; border: 1.5px solid currentColor; border-radius: 50%; background: radial-gradient(currentColor 0 1.5px, transparent 2px); }
+  .srow.dense .lbadge { left: 3px; top: 3px; font-size: 0; gap: 0; padding: 3px; }
+  .shot.playing .lbadge { color: var(--edge); }
+  .sbody { position: relative; display: flex; flex-direction: column; padding: 14px 4px 0; }
+  .sflag { position: absolute; right: 4px; top: 16px; font-size: 10.5px; color: var(--grease); border: 1px solid var(--grease); padding: 1px 6px; transform: rotate(3deg); }
+  .story h3 { font-size: 19px; font-weight: 500; line-height: 1.35; padding-right: 50px; }
+  /* 卡片上只是摘要：最多 6 行，点开卡片进阅读页看全文 */
+  .story p { margin-top: 8px; font-size: 13px; line-height: 1.75; color: var(--ink-dim); white-space: pre-line; display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden; }
+  .story.textonly .sbody { padding-top: 10px; }
+  .story.textonly p { font-size: 14.5px; color: var(--ink); }
+  .sfoot { display: flex; justify-content: space-between; align-items: baseline; padding-top: 14px; font-family: var(--mono); font-size: 10.5px; color: var(--ink-dim); }
+  .smore { color: var(--edge); transition: letter-spacing .25s; }
+
+  /* ———— 故事阅读页：以文字为主的一栏游记，照片拼成小胶片条，隔几段才出现一次 ———— */
+  .rd { --read: 680px; display: none; position: fixed; inset: 0; z-index: 35; overflow-y: auto; overscroll-behavior: contain; background: var(--desk) var(--grain); }
+  .rd.open { display: block; animation: rd-in .3s cubic-bezier(.22, 1, .36, 1); }
+  @keyframes rd-in { from { opacity: 0; transform: translateY(14px); } }
+  @media (prefers-reduced-motion: reduce) { .rd.open { animation: none; } }
+  /* 顶栏：滚过标题后中间换成文章标题，底边是阅读进度 */
+  .rd-bar { position: sticky; top: 0; z-index: 2; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px; padding: 14px var(--gutter); background: rgba(27, 24, 21, .9); backdrop-filter: blur(10px); border-bottom: 1px solid #2a2520; font-family: var(--mono); font-size: 11px; color: var(--ink-dim); }
+  .rd-back { justify-self: start; font-family: var(--zh); font-size: 13px; color: var(--ink); white-space: nowrap; }
+  .rd-back:hover { color: var(--edge); }
+  .rd-where { display: grid; min-width: 0; max-width: 52vw; text-align: center; }
+  .rd-where > * { grid-area: 1 / 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transition: opacity .25s, transform .25s; }
+  .rd-where b { font-family: var(--zh); font-weight: 500; font-size: 13px; color: var(--ink); opacity: 0; transform: translateY(6px); }
+  .rd-bar.past .rd-where span { opacity: 0; transform: translateY(-6px); }
+  .rd-bar.past .rd-where b { opacity: 1; transform: none; }
+  .rd-prog { position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--edge); transform: scaleX(var(--p, 0)); transform-origin: left; }
+  .rd-tools { justify-self: end; display: flex; align-items: center; gap: 14px; }
+
+  .rd-art { padding: 76px var(--gutter) 0; }
+  .rd-head, .rd-flow, .rd-more { max-width: var(--read); margin: 0 auto; }
+  .rd-head { text-align: center; padding-bottom: 44px; margin-bottom: 44px; border-bottom: 1px solid #2a2520; }
+  .rd-edge { display: flex; justify-content: center; gap: 14px; font-family: var(--mono); font-size: 11px; color: var(--edge); letter-spacing: .08em; }
+  .rd-head .sflag { position: static; display: inline-block; margin-top: 16px; }
+  .rd-head h1 { margin: 18px 0 0; font-size: clamp(30px, 4.2vw, 44px); font-weight: 600; line-height: 1.3; letter-spacing: .02em; text-wrap: balance; }
+  .rd-flow > p { font-size: 17px; line-height: 2.05; color: var(--ink); white-space: pre-line; text-align: justify; letter-spacing: .015em; }
+  .rd-flow > p + p { margin-top: 1.25em; }
+  /* 第一段当导语，稍大一点 */
+  .rd-flow > p:first-child { font-size: 19px; line-height: 1.95; }
+
+  /* 照片：每行和正文一样宽，同一行按宽高比分宽度、整行等高 */
+  .rd-row { display: flex; gap: 6px; margin: 40px 0; }
+  /* 比例乘 100：单张竖图的比例小于 1 时，flex 也会把整行占满 */
+  .rd-row figure { flex: calc(var(--r) * 100) 1 0; min-width: 0; }
+  .rd-row .shot { width: 100%; aspect-ratio: var(--r); }
+  .rd-row figcaption { padding: 8px 1px 0; font-size: 12px; line-height: 1.5; color: var(--ink-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* 正文里没插下的照片：虚线隔开，排在正文之后 */
+  .rd-more { margin-top: 56px; }
+  .rd-sec { margin-bottom: 34px; border-top: 1px dashed #3a342d; }
+  .rd-more .rd-row { margin: 6px 0 0; }
+  .rd-more .rd-row:has(figcaption) { margin-bottom: 14px; }
+
+  .rd-end { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 80px auto 0; font-family: var(--mono); font-size: 10px; letter-spacing: .3em; color: var(--edge); }
+  .rd-end::before, .rd-end::after { content: ""; width: 36px; border-top: 1px solid #4a4239; }
+  .rd-art.textonly .rd-end, .rd-art.editing .rd-end { margin-top: 64px; }
+
+  /* 上一篇 / 下一篇：带封面小图的两张卡片 */
+  .rd-nav { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: var(--read); margin: 0 auto; padding: 56px var(--gutter) 72px; box-sizing: content-box; }
+  .rd-go { display: flex; align-items: center; gap: 16px; min-width: 0; padding: 12px; text-align: left; background: var(--rebate); border: 1px solid #2a2520; transition: border-color .2s, transform .2s; }
+  .rd-go.next { flex-direction: row-reverse; text-align: right; }
+  .rd-go:hover { border-color: var(--edge); transform: translateY(-2px); }
+  .rd-go img { flex: none; width: 96px; height: 72px; object-fit: cover; background: #000; }
+  .rd-go > span { display: grid; gap: 5px; min-width: 0; }
+  .rd-go small { font-family: var(--mono); font-size: 10px; color: var(--edge); letter-spacing: .06em; }
+  .rd-go small::before { content: "← "; }
+  .rd-go.next small::before { content: none; }
+  .rd-go.next small::after { content: " →"; }
+  .rd-go b { font-weight: 500; font-size: 15.5px; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rd-go em { font-style: normal; font-family: var(--mono); font-size: 10px; color: var(--ink-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* 编辑模式：阅读页里直接改标题、正文和配图标题（改的是中文原文） */
+  .rd-edit { font-family: var(--zh); font-size: 12px; color: var(--ink-dim); border: 1px solid #3a342d; padding: 3px 9px; }
+  .rd-edit[aria-pressed=true] { color: var(--film); background: var(--edge); border-color: var(--edge); }
+  .rd-in { display: block; width: 100%; font: inherit; color: var(--ink); background: #1c1916; border: 1px solid #3a342d; padding: 7px 9px; resize: none; overflow: hidden; color-scheme: dark; }
+  .rd-in:focus { outline: none; border-color: var(--edge); }
+  .rd-in::placeholder { color: #5f584f; }
+  .rd-title { margin: 18px 0 0; font-size: 30px; font-weight: 500; line-height: 1.3; text-align: center; }
+  .rd-body { font-size: 16px; line-height: 1.95; }
+  .rd-cap { margin-top: 6px; font-size: 12px; padding: 5px 7px; }
+  .rd-flow .ed-s { margin-top: 8px; font-size: 12px; color: var(--ink-dim); min-height: 1.5em; }
+  .rd-flow .ed-s.err { color: #ff8a7a; }
+  /* 从故事打开的全屏看图：不显示拍摄参数 */
+  .vf.casual .readout { display: none; }
+
   .loupe { position: fixed; left: 0; top: 0; z-index: 30; width: 220px; height: 220px; border-radius: 50%; overflow: hidden; pointer-events: none; border: 6px solid #1f1c19; box-shadow: 0 0 0 1px #4a443c, 0 20px 40px rgba(0,0,0,.6); visibility: hidden; opacity: 0; transform: scale(.9); transition: opacity .15s, transform .15s; background: #000; }
   .loupe.on { visibility: visible; opacity: 1; transform: scale(1); }
   .loupe .inner { position: absolute; transform-origin: 0 0; }
@@ -127,6 +240,12 @@
   .vf .photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; padding: 70px 72px calc(var(--lcd) + 28px); }
   .vf .photo[hidden] { display: none; }
   .vf .photo.cover { object-fit: cover; padding: 0; }
+  .vf .live-clip { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; padding: 70px 72px calc(var(--lcd) + 28px); opacity: 0; transition: opacity .35s; pointer-events: none; }
+  .vf .live-clip.cover { object-fit: cover; padding: 0; }
+  .vf.playing .live-clip { opacity: 1; }
+  .vf .vlive { position: absolute; left: 62px; top: 66px; z-index: 4; display: flex; align-items: center; gap: 7px; padding: 4px 9px 4px 7px; background: rgba(0,0,0,.45); color: rgba(255,255,255,.85); font-family: var(--mono); font-size: 10px; letter-spacing: .14em; }
+  .vf .vlive[hidden] { display: none; }
+  .vf.playing .vlive { color: var(--edge); }
   .vf .vstatus { position: absolute; left: 50%; bottom: calc(var(--lcd) + 10px); transform: translateX(-50%); z-index: 4; display: flex; align-items: center; gap: 12px; padding: 7px 12px; background: rgba(0,0,0,.65); font-size: 12px; color: rgba(255,255,255,.7); white-space: nowrap; }
   .vf .vstatus[hidden] { display: none; }
   .vf .vstatus button { color: var(--edge); text-decoration: underline; }
@@ -136,8 +255,26 @@
   .vf .frm i:nth-child(2) { right: 0; top: 0; border-right-width: 1px; border-top-width: 1px; }
   .vf .frm i:nth-child(3) { left: 0; bottom: 0; border-left-width: 1px; border-bottom-width: 1px; }
   .vf .frm i:nth-child(4) { right: 0; bottom: 0; border-right-width: 1px; border-bottom-width: 1px; }
-  .vf .af { position: absolute; left: 50%; top: 50%; width: 34px; height: 24px; transform: translate(-50%, -50%); border: 1px solid rgba(255,255,255,.45); }
-  .vf .af.lock { border-color: #fff; }
+  /* 对焦点：加载中红框来回“拉风箱”找焦，大图到了变绿闪两下合焦，然后淡出不挡图 */
+  .vf .af { position: absolute; left: 50%; top: 50%; width: 34px; height: 24px; transform: translate(-50%, -50%); border: 1.5px solid #ff3b30; box-shadow: 0 0 6px rgba(255,59,48,.55), inset 0 0 4px rgba(255,59,48,.35); animation: af-hunt .8s ease-in-out infinite; }
+  .vf .af.lock { border-color: #34e05a; box-shadow: 0 0 8px rgba(52,224,90,.6), inset 0 0 4px rgba(52,224,90,.35); animation: af-lock .9s ease-out forwards; }
+  .vf .af.fail { animation: af-fail 1.2s ease-in forwards; }
+  @keyframes af-hunt {
+    0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    50% { transform: translate(-50%, -50%) scale(1.22); opacity: .6; }
+  }
+  @keyframes af-lock {
+    0% { transform: translate(-50%, -50%) scale(1.12); opacity: 1; }
+    14% { transform: translate(-50%, -50%) scale(1); }
+    28% { opacity: .25; } 40% { opacity: 1; } 52% { opacity: .25; } 64% { opacity: 1; }
+    80% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    100% { transform: translate(-50%, -50%) scale(1); opacity: 0; visibility: hidden; }
+  }
+  @keyframes af-fail { 0%, 60% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
+  @media (prefers-reduced-motion: reduce) {
+    .vf .af { animation: none; }
+    .vf .af.lock, .vf .af.fail { animation: af-fail .8s ease-in forwards; }
+  }
   .vf .vtop { position: absolute; inset: 0 0 auto 0; z-index: 4; display: flex; justify-content: space-between; align-items: center; padding: 18px 52px; font-family: var(--mono); font-size: 11px; color: rgba(255,255,255,.6); }
   .vf .vtop b { color: var(--edge); font-weight: 400; }
   .vf .vclose { font-family: var(--zh); font-size: 13px; color: rgba(255,255,255,.7); }
@@ -147,6 +284,7 @@
   .vf .cap { display: flex; justify-content: space-between; align-items: baseline; gap: 20px; padding-bottom: 12px; }
   .vf .cap h2 { font-size: 22px; font-weight: 500; }
   .vf .cap .place { font-size: 13px; color: rgba(255,255,255,.55); margin-left: 14px; font-weight: 400; }
+  .vf .cap #vfTitle:empty + .place { margin-left: 0; }
   .vf .count { font-family: var(--mono); font-size: 11px; color: rgba(255,255,255,.55); }
   .vf .readout { display: flex; align-items: flex-end; gap: 40px; min-height: 90px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,.16); }
   .vf .readout div { display: grid; gap: 3px; }
@@ -194,6 +332,8 @@
   .ed-tip { font-size: 11.5px; color: #6f675d; line-height: 1.6; margin-top: 10px; }
   .vf.editing .photo { padding-right: 432px; }
   .vf.editing .photo.cover { padding: 0 360px 0 0; }
+  .vf.editing .live-clip { padding-right: 432px; }
+  .vf.editing .live-clip.cover { padding: 0 360px 0 0; }
   .vf.editing .vstatus { left: calc((100% - 360px) / 2); }
   .vf.editing .frm { right: 412px; }
   .vf.editing .lcd { padding-right: 412px; }
@@ -220,10 +360,25 @@
     .strips { gap: 18px 0; }
     .strip { flex-wrap: wrap; width: 100%; }
     .frame { width: 50%; }
+    .stories, .scol { gap: 16px; }
+    .rd-esc { display: none; }
+    .rd-bar { grid-template-columns: auto 1fr auto; padding: 12px 16px; }
+    .rd-where { max-width: none; }
+    .rd-art { padding-top: 40px; }
+    .rd-head { padding-bottom: 28px; margin-bottom: 28px; }
+    .rd-head h1 { font-size: 27px; }
+    .rd-flow > p { font-size: 16px; line-height: 1.95; }
+    .rd-flow > p:first-child { font-size: 17px; }
+    .rd-row { gap: 4px; margin: 28px 0; }
+    .rd-more { margin-top: 40px; }
+    .rd-more .rd-row { margin-top: 4px; }
+    .rd-nav { grid-template-columns: 1fr; gap: 10px; padding: 40px 16px 48px; }
+    .rd-go img { width: 72px; height: 54px; }
     .fedge { font-size: 8px; left: 5px; right: 5px; }
     .loupe { display: none; }
     .vf .frm { inset: 56px 12px calc(var(--lcd) + 10px); }
-    .vf .photo { padding: 64px 16px calc(var(--lcd) + 20px); }
+    .vf .photo, .vf .live-clip { padding: 64px 16px calc(var(--lcd) + 20px); }
+    .vf .vlive { left: 22px; top: 66px; }
     .vf .vstatus { bottom: calc(var(--lcd) + 10px); }
     .vf .vtop { padding: 16px; }
     .vf .lcd { padding: 0 16px 16px; }
@@ -234,8 +389,8 @@
     .vf .readout .gear, .vf .readout .mini, .vf .hint { display: none; }
     .vf .zone { top: 56px; bottom: calc(var(--lcd) + 10px); }
     .ed { top: auto; height: 52vh; width: 100%; border-left: 0; border-top: 1px solid #2f2a24; }
-    .vf.editing .photo { padding: 56px 12px 52vh; }
-    .vf.editing .photo.cover { padding: 0 0 52vh; }
+    .vf.editing .photo, .vf.editing .live-clip { padding: 56px 12px 52vh; }
+    .vf.editing .photo.cover, .vf.editing .live-clip.cover { padding: 0 0 52vh; }
     .vf.editing .vstatus { left: 50%; bottom: 52vh; }
     .vf.editing .frm, .vf.editing .lcd { display: none; }
     .vf.editing .zone { bottom: 52vh; }
@@ -327,3 +482,51 @@ html[lang="en"] .filter-label { min-width: 58px; }
 @media (prefers-reduced-motion: reduce) {
   .lang-toggle, .lang-toggle * { transition: none !important; }
 }
+
+/* 作品 / 故事：做成和语言开关同一套的分段切换，让人一眼看到有两页。 */
+.view-tabs {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 4px;
+  border: 1px solid rgba(255, 210, 130, 0.28);
+  border-radius: 999px;
+  background: rgba(12, 12, 13, 0.94);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045), 0 0 18px rgba(255, 181, 61, 0.08);
+}
+.top nav .view-tabs a {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  min-width: 64px;
+  height: 30px;
+  padding: 0 16px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  color: #a39a8d;
+  transition: color 0.2s ease-out;
+}
+.top nav .view-tabs a:hover { color: var(--ink); }
+.top nav .view-tabs a[aria-current] { color: #fff6e6; text-shadow: 0 0 9px rgba(255, 200, 110, 0.55); }
+.view-thumb {
+  position: absolute;
+  top: 4px; bottom: 4px; left: 4px;
+  width: calc(50% - 4px);
+  border-radius: 999px;
+  background: rgba(255, 181, 61, 0.24);
+  box-shadow: inset 0 0 0 1px rgba(255, 214, 140, 0.42), 0 0 14px rgba(255, 181, 61, 0.32);
+  transition: transform 0.36s cubic-bezier(.22, 1, .36, 1);
+}
+.view-tabs:has(a[data-view="stories"][aria-current]) .view-thumb { transform: translateX(100%); }
+@media (max-width: 760px) {
+  .top nav .view-tabs a { min-width: 56px; padding: 0 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .view-thumb { transition: none !important; }
+}
+
+/* 顶部再放一份版权说明，和页脚同一句话。 */
+.top-note { margin: -6px var(--gutter) 14px; padding-left: 10px; border-left: 2px solid var(--edge); font-size: 12px; line-height: 1.5; color: var(--ink-dim); }

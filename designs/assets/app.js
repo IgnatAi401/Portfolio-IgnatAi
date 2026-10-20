@@ -11,18 +11,27 @@
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const fullSrc = p => `photos/full/${p.src}`;
   const thumbSrc = p => `photos/thumb/${p.src}`;
+  const midSrc = p => `photos/mid/${p.src}`;
+  const liveSrc = p => `photos/live/${p.live}`;
+  const LIVE_BADGE = `<span class="lbadge" aria-hidden="true">LIVE</span>`;
   const TYPES = ["人文", "风景"];
-  const state = { country: null, city: null, type: "all", hot: null };
+  const state = { country: null, city: null, type: "all", hot: null, view: "work" };
+  // 「作品」和「故事」共用地图和国家/城市筛选，只换下面的主体；用网址 #stories 区分
+  const storyMode = () => state.view === "stories";
 
-  let DB = null, ORDER = [], PEND = [], ORD = new Map(), COUNTRIES = [];
+  let DB = null, ORDER = [], PEND = [], ORD = new Map(), COUNTRIES = [], STORIES = [];
   let PHOTOS = new Map(), COUNTRY_PHOTOS = new Map(), COUNTRY_INFO = new Map();
   let LIT = null, frames = [], regionButtons = [], mapCountries = [];
-  const byId = id => PHOTOS.get(id);
+  let MEDIA = new Map();  // 故事里的图：id 形如 story-01#0
+  const byId = id => PHOTOS.get(id) || MEDIA.get(id);
   const isLit = p => (!state.country || p.country === state.country) && (!state.city || p.city === state.city) && (state.type === "all" || p.type === state.type);
   const litList = () => LIT ||= ORDER.filter(isLit);
   // 待审核的照片（review: true）单独一栏，只在本地编辑服务器下出现；审核通过后才进入作品、地图和筛选
   let canEdit = false;
-  const navList = p => p?.review ? PEND : litList();
+  // 故事里的图只在这篇故事里翻
+  const navList = p => p?.story ? p.story.media : p?.review ? PEND : litList();
+  const storyOf = (country, city) => STORIES.filter(s => (!country || s.country === country) && (!city || s.city === city));
+  const storyText = (s, k) => I18N.language === "en" && s[k + "En"] || s[k];
   const fmt = (lat, lon) => `${Math.abs(lat).toFixed(2)}°${lat >= 0 ? "N" : "S"}  ${Math.abs(lon).toFixed(2)}°${lon >= 0 ? "E" : "W"}`;
   const day = p => (p.taken || "").slice(0, 10);
   const when = p => p.taken ? p.taken.slice(0, 16).replace("T", " ") : t("日期待补");
@@ -199,14 +208,15 @@
     const tip = $("tip"), c = COUNTRY_INFO.get(name), g = GEO.get(name);
     if (!c || !g || g.x == null) { tip.classList.remove("on"); return; }
     const st = c.items.filter(p => p.type === "人文").length, ls = c.items.filter(p => p.type === "风景").length;
+    const ns = storyOf(c.name).length;
     const show = [...c.items.filter(p => p.pick), ...c.items.filter(p => !p.pick)].slice(0, 3);
     tip.innerHTML = `
       <div class="h"><span>${esc(c.en.toUpperCase())}</span><span>${c.items.length} EXP</span></div>
       <h3>${esc(countryLabel(c.name))}${I18N.language === "zh" ? `<small>${esc(c.en)}</small>` : ""}</h3>
-      <div class="meta">${years(c.items)} · ${t("人文")} ${st} · ${t("风景")} ${ls}</div>
+      <div class="meta">${years(c.items)} · ${storyMode() ? t("storyCount", { count: ns }) : `${t("人文")} ${st} · ${t("风景")} ${ls}`}</div>
       <div class="meta">${c.cities.map(city => esc(cityLabel(city, c.name))).join(" · ")}</div>
       <div class="thumbs">${show.map(p => `<img src="${esc(thumbSrc(p))}" alt="" decoding="async">`).join("")}</div>
-      <div class="go">${t("点击跳到印样")}</div>`;
+      <div class="go">${t(storyMode() ? "点击看这里的故事" : "点击跳到印样")}</div>`;
     const px = g.x / W * 100, py = g.y / H * 100, right = px > 62;
     tip.style.left = right ? "auto" : `calc(${px}% + 26px)`;
     tip.style.right = right ? `calc(${100 - px}% + 26px)` : "auto";
@@ -241,14 +251,21 @@
     const c = COUNTRY_INFO.get(state.country);
     if (state.city && !c?.items.some(p => p.city === state.city)) state.city = null;
     LIT = null;
-    const count = list => list.filter(p => state.type === "all" || p.type === state.type).length;
+    // 作品页数照片（受类别筛选），故事页数故事
+    const count = (country, city) => storyMode() ? storyOf(country, city).length
+      : (country ? COUNTRY_INFO.get(country)?.items || [] : ORDER).filter(p => (!city || p.city === city) && (state.type === "all" || p.type === state.type)).length;
     $("rolls").querySelectorAll("button").forEach(b => {
-      b.setAttribute("aria-pressed", b.dataset.all !== undefined ? !state.country : state.country === b.dataset.country);
-      b.querySelector("small").textContent = count(b.dataset.all !== undefined ? ORDER : COUNTRY_INFO.get(b.dataset.country)?.items || []);
+      const all = b.dataset.all !== undefined, n = count(all ? null : b.dataset.country);
+      b.setAttribute("aria-pressed", all ? !state.country : state.country === b.dataset.country);
+      b.querySelector("small").textContent = n;
+      b.classList.toggle("none", !n);
     });
     $("cityRow").hidden = !c;
-    const cityHTML = c ? `<button data-city="" aria-pressed="${!state.city}">${t("全部城市")}<small>${count(c.items)}</small></button>` +
-      c.cities.filter(city => c.cityCounts.get(city) > 0).map(city => `<button data-city="${esc(city)}" aria-pressed="${state.city === city}">${esc(cityLabel(city, c.name))}<small>${count(c.items.filter(p => p.city === city))}</small></button>`).join("") : "";
+    const cityHTML = c ? `<button data-city="" aria-pressed="${!state.city}">${t("全部城市")}<small>${count(c.name)}</small></button>` +
+      c.cities.filter(city => c.cityCounts.get(city) > 0).map(city => {
+        const n = count(c.name, city);
+        return `<button data-city="${esc(city)}" aria-pressed="${state.city === city}"${n ? "" : ' class="none"'}>${esc(cityLabel(city, c.name))}<small>${n}</small></button>`;
+      }).join("") : "";
     if ($("cities").innerHTML !== cityHTML) {
       const active = document.activeElement;
       const focusedCity = $("cities").contains(active) ? active.dataset.city : undefined;
@@ -257,8 +274,10 @@
     }
     regionButtons = [...$("rolls").querySelectorAll("button")];
     document.querySelectorAll("#toggle button").forEach(b => b.setAttribute("aria-pressed", b.dataset.type === state.type));
-    $("filterSummary").textContent = `${[state.country ? countryLabel(state.country) : t("全部国家"), cityLabel(state.city, state.country), state.type !== "all" && t(state.type)].filter(Boolean).join(" · ")} · ${photoCount(litList().length)}`;
-    $("filterReset").disabled = !state.country && !state.city && state.type === "all";
+    const story = storyMode();
+    $("typeLabel").hidden = $("toggle").hidden = story;
+    $("filterSummary").textContent = `${[state.country ? countryLabel(state.country) : t("全部国家"), cityLabel(state.city, state.country), !story && state.type !== "all" && t(state.type)].filter(Boolean).join(" · ")} · ${story ? t("storyCount", { count: count(state.country, state.city) }) : photoCount(litList().length)}`;
+    $("filterReset").disabled = !state.country && !state.city && (story || state.type === "all");
   }
   $("rolls").addEventListener("click", e => {
     const b = e.target.closest("button"); if (!b) return;
@@ -285,7 +304,8 @@
     applyFilter();
   });
   $("filterReset").addEventListener("click", () => {
-    state.country = state.city = null; state.type = "all";
+    state.country = state.city = null;
+    if (!storyMode()) state.type = "all";
     hover(null);
     applyFilter();
     $("rolls").querySelector("[data-all]").focus({ preventScroll: true });
@@ -294,8 +314,9 @@
   function applyFilter() {
     LIT = null;
     paintBar(); paintMap();
-    renderSheet();
+    renderMain();
   }
+  const renderMain = () => storyMode() ? renderStories() : renderSheet();
 
   /* ———————— 印样 ———————— */
   function greaseBox(seed) {
@@ -358,6 +379,365 @@
   }
   let sheetDirty = false;
 
+  /* ———————— 实况照片：只在故事页播放（故事卡片 + 从故事打开的全屏看图） ———————— */
+  // 播放时视频盖在静态图上淡入，播完或停止后淡回静态图
+  function playLive(box, p, ref) {
+    let v = box.querySelector("video.live-clip");
+    if (!v) {
+      v = document.createElement("video");
+      v.className = "live-clip";
+      v.muted = v.playsInline = true;
+      v.preload = "auto";
+      v.setAttribute("aria-hidden", "true");
+      v.addEventListener("playing", () => box.classList.add("playing"));
+      v.addEventListener("ended", () => box.classList.remove("playing"));
+      v.addEventListener("error", () => box.classList.remove("playing"));
+      ref ? ref.after(v) : box.append(v);
+    }
+    if (v.getAttribute("src") !== liveSrc(p)) v.src = liveSrc(p);
+    v.currentTime = 0;
+    v.play().catch(() => box.classList.remove("playing"));
+  }
+  function stopLive(box) {
+    box.classList.remove("playing");
+    box.querySelector("video.live-clip")?.pause();
+  }
+  // 故事卡片：鼠标移上去播放一遍，移开停下；触屏点开全屏后自动播放
+  $("sheet").addEventListener("pointerover", e => {
+    const b = e.target.closest?.(".story .shot.live");
+    if (b && e.pointerType === "mouse" && !b.contains(e.relatedTarget)) playLive(b, byId(b.dataset.photo));
+  });
+  $("sheet").addEventListener("pointerout", e => {
+    const b = e.target.closest?.(".story .shot.live");
+    if (b && !b.contains(e.relatedTarget)) stopLive(b);
+  });
+
+  /* ———————— 故事：一篇一张卡片，按日期从新到旧，瀑布流排列 ———————— */
+  // 故事里的每张图都包成独立对象：可以引用作品照片（photo），也可以是故事自己的随手拍（src）。
+  // 故事页只讲经过，不带拍摄参数，也不进作品、地图和筛选的计数。
+  // raw 是 stories.json 里的原始数据，编辑模式改完整份写回；页面用的对象通过 raw 指回原数据
+  let STORY_RAW = [];
+  function buildStories(raw) {
+    MEDIA = new Map();
+    STORY_RAW = raw;
+    STORIES = raw.map(src => {
+      const s = { ...src, raw: src };
+      s.media = (src.media || []).map((m, i) => {
+        const base = m.photo ? PHOTOS.get(m.photo) : m.src ? m : null;
+        if (!base) return null;
+        const item = {
+          id: `${s.id}#${i}`, src: base.src, w: base.w, h: base.h, live: base.live || "",
+          title: m.caption || "", titleEn: m.captionEn || "", spot: m.spot || "",
+          country: s.country, city: s.city, taken: m.taken || base.taken || "", story: s, raw: m,
+        };
+        MEDIA.set(item.id, item);
+        return item;
+      }).filter(Boolean);
+      return s;
+    });
+  }
+  const caption = p => I18N.language === "en" && p.titleEn || p.title;
+
+  // 每行几张：数据里写了 layout（如 [1, 3]）就照着排，否则按张数自动排；放不下的在最后一张上标 +N
+  const autoRows = n => n <= 2 ? [n] : n === 3 ? [1, 2] : n === 4 ? [2, 2] : [2, 3];
+  function mediaHTML(s) {
+    const items = s.media;
+    if (!items.length) return "";
+    const rows = s.layout?.length ? s.layout : autoRows(items.length);
+    const shown = Math.min(items.length, rows.reduce((a, b) => a + b, 0));
+    let k = 0;
+    return `<div class="smedia">${rows.map(n => {
+      const row = items.slice(k, Math.min(k + n, shown)); k += n;
+      if (!row.length) return "";
+      // 同一行按宽高比分宽度，整行等高；单张一行时限制得别太高或太扁
+      return `<div class="srow${row.length > 2 ? " dense" : ""}">${row.map(p => {
+        const lo = row.length === 1 ? .8 : .6, ratio = Math.min(2.4, Math.max(lo, p.w / p.h || 1.5)).toFixed(3);
+        const rest = p === items[shown - 1] && items.length > shown ? `<span class="srest">+${items.length - shown}</span>` : "";
+        const name = caption(p) || storyText(s, "title");
+        return `<button class="shot${p.live ? " live" : ""}" style="--r:${ratio}" data-photo="${esc(p.id)}" aria-label="${t("全屏看：")}${esc(name)}"><img src="${esc(thumbSrc(p))}" alt="${esc(name)}" loading="lazy" decoding="async" draggable="false">${p.live ? LIVE_BADGE : ""}${rest}</button>`;
+      }).join("")}</div>`;
+    }).join("")}</div>`;
+  }
+  function storyCardHTML(s, i) {
+    const date = (s.date || "").replaceAll("-", ".");
+    const place = [countryLabel(s.country), cityLabel(s.city, s.country)].filter(Boolean).join(" · ");
+    const text = storyText(s, "text");
+    return `
+      <article class="story${s.media.length ? "" : " textonly"}" data-i="${i}" data-story="${esc(s.id)}">
+        <div class="sedge"><span>${esc(date)}</span><span>${esc(place)}</span></div>
+        ${mediaHTML(s)}
+        <div class="sbody">
+          ${s.placeholder ? `<span class="sflag">${t("占位")}</span>` : ""}
+          <h3><a href="#stories/${encodeURIComponent(s.id)}" class="slink">${esc(storyText(s, "title"))}</a></h3>
+          ${text ? `<p>${esc(text)}</p>` : ""}
+          <div class="sfoot"><span>${s.media.length ? photoCount(s.media.length) : ""}</span><span class="smore" aria-hidden="true">${t("阅读全文")} →</span></div>
+        </div>
+      </article>`;
+  }
+  // 按日期从新到旧
+  const storyList = () => storyOf(state.country, state.city).sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+  function renderStories() {
+    const list = storyList();
+    $("sheet").innerHTML = `
+      <div class="sheet-head">
+        <h2>Stories<small>${t("storyCount", { count: list.length })}</small></h2>
+      </div>
+      ${list.length ? `<div class="stories">${list.map(storyCardHTML).join("")}</div>`
+        : `<div class="empty">${t("这里还没有故事，换个国家或城市看看。")}</div>`}`;
+    frames = [];
+    hideLoupe();
+    sheetDirty = false;
+    storyCols = 0;
+    layoutStories();
+  }
+
+  // 瀑布流：卡片按顺序放进当前最矮的一列。图片都写了宽高比，不用等加载完就能量出高度；列数变了才重排
+  const STORY_MIN = 300, STORY_GAP = 22;
+  let storyCols = 0;
+  function layoutStories() {
+    const box = $("sheet").querySelector(".stories");
+    if (!box) return;
+    const n = Math.max(1, Math.min(4, Math.floor((box.clientWidth + STORY_GAP) / (STORY_MIN + STORY_GAP))));
+    if (n === storyCols) return;
+    storyCols = n;
+    const cards = [...box.querySelectorAll(".story")].sort((a, b) => a.dataset.i - b.dataset.i);
+    const cols = Array.from({ length: n }, () => Object.assign(document.createElement("div"), { className: "scol" }));
+    box.replaceChildren(...cols);
+    const heights = cols.map(() => 0);
+    cards.forEach(card => {
+      const i = heights.indexOf(Math.min(...heights));
+      cols[i].append(card);
+      heights[i] += card.offsetHeight + STORY_GAP;
+    });
+  }
+  addEventListener("resize", layoutStories);
+
+  /* ———————— 故事阅读页：点开卡片看全文和全部图片；网址 #stories/<故事id> 可以直接分享 ———————— */
+  const rd = $("rd");
+  let rdStory = null, rdPushed = false;
+  // 阅读页里的图：按顺序拼成一行行，每行和正文一样宽。一行最多两张横图、三张竖图，或一横一竖；
+  // 数据里写了 layout 就照着分
+  const isWide = p => (p.w / p.h || 1.5) >= 1.1;
+  const rowFits = row => {
+    const L = row.filter(isWide).length, P = row.length - L;
+    return L === 0 ? P <= 3 : L === 1 ? P <= 1 : L === 2 && P === 0;
+  };
+  function readerRows(items, layout) {
+    if (layout?.length) {
+      const rows = []; let k = 0;
+      for (const n of layout) { if (k < items.length) rows.push(items.slice(k, k += n)); }
+      if (k < items.length) rows.push(...readerRows(items.slice(k)));
+      return rows;
+    }
+    const rows = [];
+    let row = [];
+    for (const p of items) {
+      if (row.length && !rowFits([...row, p])) { rows.push(row); row = []; }
+      row.push(p);
+    }
+    if (row.length) rows.push(row);
+    // 最后落单一张竖图：上一行末尾也是竖图就借过来凑成两张（三竖变两竖+两竖，一横一竖变横图单独一行+两竖）
+    const last = rows.at(-1), prev = rows.at(-2);
+    if (prev && last.length === 1 && !isWide(last[0]) && !isWide(prev.at(-1))) last.unshift(prev.pop());
+    return rows;
+  }
+  function readerHTML(s) {
+    const list = storyList(), i = list.indexOf(s);
+    const prev = i > 0 ? list[i - 1] : null, next = i >= 0 && i < list.length - 1 ? list[i + 1] : null;
+    const date = (s.date || "").replaceAll("-", ".");
+    const place = [countryLabel(s.country), cityLabel(s.city, s.country)].filter(Boolean).join(" · ");
+    const body = storyText(s, "text");
+    const paras = body.split(/\n\s*\n/).map(x => x.trim()).filter(Boolean);
+    // 编辑模式：标题、正文、配图标题都换成输入框，和照片编辑一样改的是中文原文
+    const ed = canEdit && editing;
+    const n = s.media.length;
+    const cap = p => {
+      if (ed) return `<input class="rd-in rd-cap" data-mi="${s.media.indexOf(p)}" value="${esc(p.title)}" placeholder="${t("配图标题（可留空）")}">`;
+      return caption(p) ? `<figcaption>${esc(caption(p))}</figcaption>` : "";
+    };
+    const shot = (p, full) => {
+      const name = caption(p) || storyText(s, "title");
+      return `<button class="shot${p.live ? " live" : ""}" data-photo="${esc(p.id)}" aria-label="${t("全屏看：")}${esc(name)}"><img src="${esc(thumbSrc(p))}"${full ? ` data-mid="${esc(midSrc(p))}"` : ""} alt="${esc(name)}" loading="lazy" decoding="async" draggable="false" width="${p.w}" height="${p.h}">${p.live ? LIVE_BADGE : ""}</button>`;
+    };
+    const ratio = p => p.w / p.h || 1.5;
+    // --rs 是整行的宽高比之和，CSS 用它限制整行别比一屏还高
+    const rowHTML = (row, extra = "") => `<div class="rd-row${extra}" style="--rs:${row.reduce((a, p) => a + ratio(p), 0).toFixed(3)}">${row.map(p =>
+      `<figure style="--r:${ratio(p).toFixed(3)}">${shot(p, true)}${cap(p)}</figure>`).join("")}</div>`;
+
+    // 排版：文字为主。照片拼成的胶片条均匀插在段落之间，最多每两段一条，让大部分段落连着读；
+    // 插不下的：剩一行就接在正文后面，多了用一条虚线隔开，排在正文之后
+    const rows = readerRows(s.media, s.layout);
+    let flow = "", more = "";
+    if (ed) {
+      flow = `<textarea class="rd-in rd-body" data-sk="text" rows="6" placeholder="${t("正文：空一行分段")}">${esc(s.text || "")}</textarea>
+        <div class="ed-s" id="rdStatus" role="status">${esc(storyStatus.msg)}</div>
+        ${rows.map(r => rowHTML(r)).join("")}`;
+    } else {
+      const gaps = Math.max(0, paras.length - 1);
+      const stops = Math.min(rows.length, Math.ceil(gaps / 2));
+      const at = new Map();
+      for (let j = 0; j < stops; j++) {
+        let k = Math.min(gaps, Math.max(1, Math.round((j + 1) * paras.length / (stops + 1))));
+        while (at.has(k) && k < gaps) k++;
+        if (!at.has(k)) at.set(k, rows[at.size]);
+      }
+      flow = paras.map((x, k) => `<p>${esc(x)}</p>${at.has(k + 1) ? rowHTML(at.get(k + 1)) : ""}`).join("");
+      const left = rows.slice(at.size);
+      if (left.length === 1) flow += rowHTML(left[0]);
+      else if (left.length) {
+        more = `<section class="rd-more">
+          <div class="rd-sec" aria-hidden="true"></div>
+          ${left.map(r => rowHTML(r)).join("")}
+        </section>`;
+      }
+    }
+    const navBtn = (x, dir) => {
+      if (!x) return "<span></span>";
+      const c = x.media[0];
+      return `<button class="rd-go ${dir}" data-story="${esc(x.id)}">${c ? `<img src="${esc(thumbSrc(c))}" alt="" loading="lazy" decoding="async">` : ""}<span><small>${t(dir === "prev" ? "上一篇" : "下一篇")}</small><b>${esc(storyText(x, "title"))}</b><em>${esc((x.date || "").replaceAll("-", "."))}　${esc([countryLabel(x.country), cityLabel(x.city, x.country)].filter(Boolean).join(" · "))}</em></span></button>`;
+    };
+    return `
+      <div class="rd-bar"><button class="rd-back" id="rdClose">← ${t("返回故事")}</button><span class="rd-where"><span>${esc(date)}　${esc(place)}</span><b>${esc(storyText(s, "title"))}</b></span><span class="rd-tools">${canEdit ? `<button class="rd-edit" id="rdEdit" aria-pressed="${ed}">${t("编辑模式")}</button>` : ""}<span class="rd-esc">Esc</span></span><i class="rd-prog" aria-hidden="true"></i></div>
+      <article class="rd-art${n ? "" : " textonly"}${ed ? " editing" : ""}">
+        <header class="rd-head">
+          <div class="rd-edge"><span>${esc(date)}</span><span>${esc(place)}</span></div>
+          ${s.placeholder ? `<span class="sflag">${t("占位")}</span>` : ""}
+          ${ed ? `<textarea class="rd-in rd-title" data-sk="title" rows="1" placeholder="${t("故事标题")}">${esc(s.title || "")}</textarea>`
+            : `<h1>${esc(storyText(s, "title"))}</h1>`}
+        </header>
+        <div class="rd-flow">${flow}</div>
+        ${more}
+        <div class="rd-end" aria-hidden="true">END OF ROLL</div>
+      </article>
+      ${prev || next ? `<nav class="rd-nav">${navBtn(prev, "prev")}${navBtn(next, "next")}</nav>` : ""}`;
+  }
+  // 阅读页先显示小图，快滚到时在后台下载中图（长边 1600），解码好再换上，不会出现空白。
+  // 不用原图：几十张原图同时解码要占几 GB 内存，Safari 会直接把页面杀掉；全屏看图才用原图。
+  // 离开屏幕很远的图换回小图，释放内存，滚回来再换上中图；中图缺失就一直用小图
+  const rdFull = new IntersectionObserver(entries => entries.forEach(e => {
+    const img = e.target, url = img.dataset.mid;
+    if (!e.isIntersecting) {
+      if (img.dataset.up) { delete img.dataset.up; img.src = img.dataset.thumb; }
+      return;
+    }
+    if (img.dataset.up || img.dataset.bad) return;
+    img.dataset.up = "1";
+    img.dataset.thumb ||= img.getAttribute("src");
+    const big = new Image();
+    big.src = url;
+    big.decode().then(() => { if (img.isConnected && img.dataset.up) img.src = url; })
+      .catch(() => { img.dataset.bad = "1"; delete img.dataset.up; });
+  }), { root: rd, rootMargin: "1200px 0px" });
+  function rdOpen(s) {
+    const same = rdStory === s && rd.classList.contains("open");
+    rdStory = s;
+    rdFull.disconnect();
+    rd.innerHTML = readerHTML(s);
+    rd.querySelectorAll("img[data-mid]").forEach(img => rdFull.observe(img));
+    if (!same) {
+      hideLoupe();
+      rd.classList.add("open"); document.body.classList.add("lock");
+      rd.setAttribute("aria-hidden", "false");
+      rd.scrollTop = 0;
+      $("rdClose").focus({ preventScroll: true });
+    }
+    rd.querySelectorAll("textarea.rd-in").forEach(grow);
+    rdScroll();
+  }
+  // 顶栏：底边一条读到哪的进度；标题滚出屏幕后，顶栏中间换成文章标题
+  let rdTick = 0;
+  function rdScroll() {
+    rdTick = 0;
+    const bar = rd.querySelector(".rd-bar"), h1 = rd.querySelector(".rd-head h1");
+    if (!bar) return;
+    const max = rd.scrollHeight - rd.clientHeight;
+    bar.style.setProperty("--p", max > 0 ? Math.min(1, rd.scrollTop / max).toFixed(4) : 0);
+    bar.classList.toggle("past", !!h1 && h1.getBoundingClientRect().bottom < bar.offsetHeight);
+  }
+  rd.addEventListener("scroll", () => { if (!rdTick) rdTick = requestAnimationFrame(rdScroll); }, { passive: true });
+  // 输入框跟着内容长高，不出现内部滚动条
+  function grow(el) { el.style.height = "auto"; el.style.height = el.scrollHeight + 2 + "px"; }
+  function rdClose() {
+    if (!rd.classList.contains("open")) return;
+    rd.classList.remove("open");
+    rd.setAttribute("aria-hidden", "true");
+    if (!vf.classList.contains("open")) document.body.classList.remove("lock");
+    rdFull.disconnect();
+    rd.innerHTML = "";
+    if (storiesDirty) { storiesDirty = false; if (storyMode()) renderMain(); }
+    const card = rdStory && $("sheet").querySelector(`.story[data-story="${CSS.escape(rdStory.id)}"]`);
+    if (card) { card.scrollIntoView({ block: "nearest", behavior: "instant" }); card.querySelector(".slink")?.focus({ preventScroll: true }); }
+    rdStory = null;
+  }
+  // 关闭：是从页面里点开的就退回上一步（浏览器后退键同理），直接打开链接的就换回 #stories
+  function leaveReader() {
+    if (rdPushed) { rdPushed = false; history.back(); }
+    else { history.replaceState(null, "", "#stories"); route(); }
+  }
+  function openStory(id) {
+    rdPushed = true;
+    location.hash = `stories/${encodeURIComponent(id)}`;
+  }
+  rd.addEventListener("click", e => {
+    if (e.target.closest("#rdClose")) return leaveReader();
+    if (e.target.closest("#rdEdit")) return setEditing(!editing);
+    const go = e.target.closest(".rd-go");
+    if (go) { history.replaceState(null, "", `#stories/${encodeURIComponent(go.dataset.story)}`); route(); rd.scrollTop = 0; return; }
+    const s = e.target.closest(".shot"); if (s) vfOpen(s.dataset.photo);
+  });
+  rd.addEventListener("pointerover", e => {
+    const b = e.target.closest?.(".shot.live");
+    if (b && e.pointerType === "mouse" && !b.contains(e.relatedTarget)) playLive(b, byId(b.dataset.photo));
+  });
+  rd.addEventListener("pointerout", e => {
+    const b = e.target.closest?.(".shot.live");
+    if (b && !b.contains(e.relatedTarget)) stopLive(b);
+  });
+  addEventListener("keydown", e => {
+    if (e.key !== "Escape" || !rd.classList.contains("open") || vf.classList.contains("open")) return;
+    e.preventDefault();
+    if (e.target instanceof Element && e.target.matches(".rd-in")) e.target.blur();
+    else leaveReader();
+  });
+  // 编辑故事：改的同时更新页面对象和原始数据，停手后整份写回 stories.json
+  rd.addEventListener("input", e => {
+    const el = e.target, s = rdStory;
+    if (!s || !el.matches?.(".rd-in")) return;
+    const v = el.dataset.sk === "text" ? el.value.trim() : el.value.trim().replace(/\s+/g, " ");
+    if (el.dataset.sk) s[el.dataset.sk] = s.raw[el.dataset.sk] = v;
+    else {
+      const p = s.media[+el.dataset.mi];
+      if (!p) return;
+      p.title = p.raw.caption = v;
+    }
+    if (el.tagName === "TEXTAREA") grow(el);
+    storiesDirty = true;
+    scheduleStorySave();
+  });
+
+  // 网址：#stories 是故事页，#stories/<id> 再打开那篇的阅读页，其他都是作品页
+  let routed = false;
+  function route() {
+    const [view, id] = location.hash.slice(1).split("/");
+    const v = view === "stories" ? "stories" : "work";
+    if (!routed || v !== state.view) { routed = true; setView(v); }
+    const s = v === "stories" && id && STORIES.find(x => x.id === decodeURIComponent(id));
+    if (s) rdOpen(s); else { rdPushed = false; rdClose(); }
+  }
+
+  // 切换「作品 / 故事」：只换主体、地图标题和导航高亮，筛选条件保留
+  function setView(view) {
+    state.view = view === "stories" ? "stories" : "work";
+    document.querySelectorAll(".top nav a[data-view]").forEach(a => a.dataset.view === state.view ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current"));
+    $("mapTitle").innerHTML = storyMode() ? "Roads<br>&amp; Stories" : "Places<br>&amp; Frames";
+    $("mapSub").dataset.i18n = storyMode() ? "走过的路，留下的故事" : "走过的地方，拍下的底片";
+    $("mapSub").textContent = t($("mapSub").dataset.i18n);
+    if (!DB) return;
+    hover(null);
+    applyFilter();
+  }
+  addEventListener("hashchange", route);
+
   // 放大镜
   const loupe = $("loupe"), inner = $("loupeInner"), Z = 2.6, R = 110;
   let lensOn = null, lensRect = null, lensPointer = null, lensFrame = null, lensPausedUntil = 0;
@@ -404,6 +784,8 @@
     .observe(vf.querySelector(".lcd"));
 
   function paintViewer(p) {
+    vf.classList.toggle("casual", !!p.story);
+    if (p.story) return paintStoryViewer(p);
     const lit = navList(p), i = lit.indexOf(p);
     $("vfRoll").innerHTML = `<b>${esc(countryLabel(p.country))}</b>　${esc(cityLabel(p.city, p.country) || t("城市待补"))}　▸ ${t("frameNumber", { pending: p.review ? t("待审核") + (I18N.language === "en" ? " · " : " ") : "", number: ORD.get(p) + 1 })}`;
     $("vfFilt").textContent = p.review ? t("只翻待审核的")
@@ -426,6 +808,17 @@
     } else $("vfMini").hidden = true;
   }
 
+  // 故事里的图：顶上写是哪篇故事，下面只有图注、地点和日期，不显示拍摄参数
+  function paintStoryViewer(p) {
+    const s = p.story, i = s.media.indexOf(p);
+    $("vfRoll").innerHTML = `<b>${esc(countryLabel(s.country))}</b>　${esc(cityLabel(s.city, s.country))}　▸ ${esc(storyText(s, "title"))}`;
+    $("vfFilt").textContent = "";
+    // 没写配图标题就空着，不拿文章标题顶替
+    $("vfTitle").textContent = caption(p);
+    $("vfPlace").textContent = [label(p.spot), (p.taken || s.date || "").slice(0, 10).replaceAll("-", ".")].filter(Boolean).join("　");
+    $("vfCount").textContent = `${pad(i + 1)} / ${pad(s.media.length)}`;
+  }
+
   let viewerRequest = 0, viewerLoadTimer = null, viewerImages = [];
   function cancelViewerLoad() {
     viewerRequest++;
@@ -435,7 +828,27 @@
     viewerImages.forEach(img => { if (!img.isConnected) img.removeAttribute("src"); });
     viewerImages = [];
   }
+  // 全屏看图：只有故事里的图带实况时才出现 LIVE 按钮
+  const viewerLive = p => p?.story && p.live ? p : null;
+  function resetViewerLive() {
+    stopLive(vf);
+    const v = vf.querySelector("video.live-clip");
+    if (v) { v.removeAttribute("src"); v.load(); }
+    $("vfLive").hidden = true;
+  }
+  // LIVE 标贴在照片画面的左上角：按 contain 缩放算出画面实际位置；铺满模式下照片顶到屏幕边，就用样式里的默认位置
+  function placeLive() {
+    const b = $("vfLive"), img = $("vfImg");
+    if (b.hidden || !cur || cover || img.hidden) { b.style.left = b.style.top = ""; return; }
+    const cs = getComputedStyle(img), pl = parseFloat(cs.paddingLeft), pt = parseFloat(cs.paddingTop);
+    const bw = img.clientWidth - pl - parseFloat(cs.paddingRight), bh = img.clientHeight - pt - parseFloat(cs.paddingBottom);
+    const k = Math.min(bw / cur.w, bh / cur.h);
+    b.style.left = Math.round(pl + (bw - cur.w * k) / 2 + 10) + "px";
+    b.style.top = Math.round(pt + (bh - cur.h * k) / 2 + 10) + "px";
+  }
+  new ResizeObserver(placeLive).observe(vf);
   function clearViewerImages() {
+    resetViewerLive();
     for (const id of ["vfPreview", "vfImg"]) {
       const img = $(id);
       img.hidden = true;
@@ -467,7 +880,8 @@
     clearViewerImages();
     paintViewer(p);
     syncEditor();
-    $("vfAf").classList.remove("lock");
+    $("vfAf").classList.remove("lock", "fail");
+    void $("vfAf").offsetWidth; // 缓存命中时大图几乎立刻到，先强制重排，合焦动画才会重播
     vf.setAttribute("aria-busy", "true");
     viewerStatus("正在加载照片……");
 
@@ -484,6 +898,7 @@
       clearTimeout(viewerLoadTimer);
       viewerLoadTimer = null;
       full.removeAttribute("src");
+      $("vfAf").classList.add("fail");
       vf.setAttribute("aria-busy", "false");
       viewerStatus($("vfPreview").hidden ? "照片加载失败" : "大图加载失败，暂时显示预览", true);
     };
@@ -505,6 +920,7 @@
       clearTimeout(viewerLoadTimer);
       viewerLoadTimer = null;
       mountViewerImage(full, "vfImg", p);
+      if (viewerLive(p)) { $("vfLive").hidden = false; playLive(vf, p, $("vfImg")); vf.querySelector("video.live-clip").classList.toggle("cover", cover); placeLive(); }
       $("vfPreview").hidden = true;
       $("vfPreview").removeAttribute("src");
       $("vfAf").classList.add("lock");
@@ -517,6 +933,7 @@
   function step(dir) {
     const lit = navList(cur);
     if (!lit.length || !cur) return;
+    if (cur.story) return vfShow(lit[(lit.indexOf(cur) + dir + lit.length) % lit.length]);
     const o = ORD.get(cur);
     const next = dir > 0
       ? lit.find(p => ORD.get(p) > o) || lit[0]
@@ -535,7 +952,7 @@
   }
   function vfClose() {
     cancelViewerLoad();
-    vf.classList.remove("open"); document.body.classList.remove("lock");
+    vf.classList.remove("open"); document.body.classList.toggle("lock", rd.classList.contains("open"));
     vf.setAttribute("aria-hidden", "true");
     vf.setAttribute("aria-busy", "false");
     clearViewerImages();
@@ -547,11 +964,18 @@
     if (focus && document.contains(focus)) focus.focus({ preventScroll: true });
   }
 
-  $("sheet").addEventListener("click", e => { const w = e.target.closest(".win"); if (w) vfOpen(w.dataset.id); });
+  $("sheet").addEventListener("click", e => {
+    const w = e.target.closest(".win"); if (w) return vfOpen(w.dataset.id);
+    const s = e.target.closest(".shot"); if (s) return vfOpen(s.dataset.photo);
+    const card = e.target.closest(".story[data-story]");
+    if (card && !e.metaKey && !e.ctrlKey) { e.preventDefault(); openStory(card.dataset.story); }
+  });
   $("vfClose").onclick = vfClose;
   $("vfPrev").onclick = () => step(-1);
   $("vfNext").onclick = () => step(1);
   $("vfRetry").onclick = () => vfShow(cur);
+  $("vfLive").onclick = () => viewerLive(cur) && playLive(vf, cur, $("vfImg"));
+  $("vfLive").onpointerenter = e => { if (e.pointerType === "mouse" && viewerLive(cur)) playLive(vf, cur, $("vfImg")); };
   addEventListener("keydown", e => {
     if (!vf.classList.contains("open")) return;
     if (e.target instanceof Element && e.target.matches("input, textarea, select")) { if (e.key === "Escape") e.target.blur(); return; }
@@ -562,6 +986,8 @@
       e.preventDefault();
       cover = !cover;
       for (const id of ["vfPreview", "vfImg"]) $(id).classList.toggle("cover", cover);
+      vf.querySelector("video.live-clip")?.classList.toggle("cover", cover);
+      placeLive();
     }
   });
   let x0 = null;
@@ -577,10 +1003,11 @@
     $("editToggle").setAttribute("aria-pressed", on);
     try { localStorage.setItem("ignat-edit", on ? "1" : ""); } catch {}
     syncEditor();
+    if (rdStory && rd.classList.contains("open")) rdOpen(rdStory);
   }
   // 待审核的照片不管编辑模式开没开，都带着编辑面板（要在面板里点「审核通过」）
   function syncEditor() {
-    const on = editing || !!cur?.review;
+    const on = !cur?.story && (editing || !!cur?.review);
     vf.classList.toggle("editing", on);
     ed.hidden = !on;
     if (on && cur && vf.classList.contains("open")) fillEditor(cur);
@@ -683,18 +1110,45 @@
       }
     });
   }
-  addEventListener("beforeunload", e => { if (saveTimer) { e.preventDefault(); e.returnValue = ""; } });
+  // 故事单独存到 /api/stories，状态显示在阅读页里
+  let storyTimer = null, storiesDirty = false;
+  const storyStatus = { msg: "" };
+  const setStoryStatus = (msg, err = false) => {
+    storyStatus.msg = msg;
+    const el = $("rdStatus");
+    if (el) { el.textContent = msg; el.classList.toggle("err", err); }
+  };
+  function scheduleStorySave() {
+    setStoryStatus(t("有改动，马上保存…"));
+    clearTimeout(storyTimer);
+    storyTimer = setTimeout(() => { storyTimer = null; saveStoriesNow(); }, 600);
+  }
+  function saveStoriesNow() {
+    const body = JSON.stringify({ stories: STORY_RAW });
+    saveChain = saveChain.then(async () => {
+      try {
+        const r = await fetch("/api/stories", { method: "PUT", headers: { "Content-Type": "application/json" }, body });
+        if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || `HTTP ${r.status}`);
+        setStoryStatus(t("saved", { time: new Date().toLocaleTimeString(I18N.language === "en" ? "en-GB" : "zh-CN", { hour12: false }) }));
+      } catch (err) {
+        setStoryStatus(t("saveFailed", { error: err.message }), true);
+      }
+    });
+  }
+  addEventListener("beforeunload", e => { if (saveTimer || storyTimer) { e.preventDefault(); e.returnValue = ""; } });
 
   // Repaint labels only; preserve filters, the current photo and source data.
   $("languageToggle").addEventListener("click", () => {
     I18N.toggle();
     if (!DB) return;
-    renderBar(); renderSheet(); paintMap();
+    renderBar(); renderMain(); paintMap();
+    $("mapSub").textContent = t($("mapSub").dataset.i18n);
     mapCountries.forEach(el => {
       const c = COUNTRY_INFO.get(el.dataset.country);
       if (c) el.setAttribute("aria-label", `${countryLabel(c.name)}, ${photoCount(c.items.length)}`);
     });
     if (state.hot) showTip(state.hot);
+    if (rdStory && rd.classList.contains("open")) rdOpen(rdStory);
     if (cur && vf.classList.contains("open")) {
       paintViewer(cur);
       for (const id of ["vfPreview", "vfImg"]) $(id).alt = photoAlt(cur);
@@ -711,10 +1165,14 @@
       $("sheet").innerHTML = `<div class="empty" data-i18n="读不到 shared/photos.json。请用预览服务器打开（不要直接双击 html 文件）。">${t("读不到 shared/photos.json。请用预览服务器打开（不要直接双击 html 文件）。")}</div>`;
       return;
     }
+    // 故事数据单独一个文件；读不到时故事页显示为空，不影响作品页
+    const rawStories = await fetch("shared/stories.json", { cache: "no-store" }).then(r => r.ok ? r.json() : { stories: [] }).then(j => j.stories || []).catch(() => []);
     derive();
+    buildStories(rawStories);
     $("edgeYears").textContent = `IGNAT ATLAS ▸ ${years(ORDER)}`;
     $("edgeCount").textContent = `${COUNTRIES.length} ${COUNTRIES.length > 1 ? "COUNTRIES" : "COUNTRY"} / ${ORDER.length} EXP`;
-    renderBar(); renderSheet();
+    renderBar();
+    route();
     buildMap().catch(() => { const el = $("mapLoading"); if (el) { el.dataset.i18n = "地图暂时无法加载，请刷新重试"; el.textContent = t(el.dataset.i18n); } });
     // 只有本地编辑服务器有 /api/edit；部署成静态网站时这里会失败，编辑按钮保持隐藏
     fetch("/api/edit", { cache: "no-store" }).then(r => r.ok && r.json()).then(j => {

@@ -7,7 +7,7 @@ const I18N = (() => {
   } catch { /* The toggle still works when storage is unavailable. */ }
   const messages = {
     "Ignat 摄影作品": "Ignat Photography",
-    "作品": "Work", "关于": "About", "联系": "Contact", "编辑模式": "Edit mode",
+    "作品": "Work", "故事": "Stories", "联系": "Contact", "编辑模式": "Edit mode",
     "拍摄地点地图": "Map of photo locations", "底片上的世界": "The world on film",
     "正在冲洗地图……": "Developing the map…", "走过的地方，拍下的底片": "Places explored, moments on film",
     "国家": "Country", "城市": "City", "类别": "Category",
@@ -16,7 +16,7 @@ const I18N = (() => {
     "人文": "People & culture", "风景": "Landscape", "重置筛选": "Reset filters",
     "正在读取照片……": "Loading photographs…",
     "© Ignat · 所有照片由 Ignat 拍摄，未经允许禁止商用。": "© Ignat · All photographs by Ignat. Commercial use without permission is prohibited.",
-    "全屏看图": "Photo viewer", "重新加载": "Retry", "关闭（Esc）": "Close (Esc)",
+    "全屏看图": "Photo viewer", "播放实况": "Play Live Photo", "重新加载": "Retry", "关闭（Esc）": "Close (Esc)",
     "上一张": "Previous photo", "下一张": "Next photo", "← → 翻页　F 铺满": "← → Browse · F Fill screen",
     "快门": "Shutter", "光圈": "Aperture", "焦距": "Focal length",
     "编辑照片信息": "Edit photo details", "编辑这张": "Edit this photo",
@@ -36,8 +36,13 @@ const I18N = (() => {
     "正在加载照片……": "Loading photo…", "照片加载失败": "Photo failed to load",
     "大图加载失败，暂时显示预览": "Full image unavailable; showing preview", "正在加载大图……": "Loading full image…",
     "有改动，马上保存…": "Saving changes…",
+    "故事标题": "Story title", "正文：空一行分段": "Story text (blank line between paragraphs)", "配图标题（可留空）": "Photo caption (optional)",
     "读不到 shared/photos.json。请用预览服务器打开（不要直接双击 html 文件）。": "Unable to read shared/photos.json. Open this page through the preview server.",
     "地图暂时无法加载，请刷新重试": "Map unavailable. Refresh to try again.",
+    "走过的路，留下的故事": "Roads travelled, stories kept", "点击看这里的故事": "Click to read stories from here",
+    "占位": "Placeholder", "阅读全文": "Read the story", "返回故事": "Back to stories", "上一篇": "Previous", "下一篇": "Next",
+    "这里还没有故事，换个国家或城市看看。": "No stories here yet. Try another country or city.",
+    "storyCount": "{count} stories",
     "photoCount": "{count} photos", "proofCount": "{cities} places, {count} photos",
     "pendingCount": "{count} photos · Hidden from the public portfolio, map and filters until approved",
     "frameNumber": "{pending}Frame {number}", "approved": "Approved and added to portfolio ({count} still pending)",
@@ -45,6 +50,7 @@ const I18N = (() => {
     "saveFailed": "Save failed: {error}. Check that the preview server is running, then edit a field to retry."
   };
   const chinese = {
+    storyCount: "{count} 篇故事",
     photoCount: "{count} 张", proofCount: "{cities} 个地方，{count} 张",
     pendingCount: "{count} 张，审核通过前不会出现在作品、地图和筛选里，也不会上线",
     frameNumber: "{pending}第 {number} 张", approved: "已通过，并入作品（还剩 {count} 张待审核）",
@@ -54,8 +60,8 @@ const I18N = (() => {
   function t(key, values = {}) {
     const dictionary = language === "en" ? messages : chinese;
     let text = Object.hasOwn(dictionary, key) ? dictionary[key] : key;
-    if (language === "en" && ["photoCount", "proofCount", "pendingCount"].includes(key)) {
-      if (values.count === 1) text = text.replace("photos", "photo");
+    if (language === "en" && ["photoCount", "proofCount", "pendingCount", "storyCount"].includes(key)) {
+      if (values.count === 1) text = text.replace("photos", "photo").replace("stories", "story");
       if (values.cities === 1) text = text.replace("places", "place");
     }
     return text.replace(/\{(\w+)\}/g, (match, name) => values[name] ?? match);

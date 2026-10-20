@@ -1,7 +1,7 @@
 {
  "countries": {
   "俄罗斯": {"en": "Russia", "iso": "643", "cities": [{"name": "莫斯科", "en": "Moscow", "lat": 55.7558, "lon": 37.6173}, {"name": "圣彼得堡", "en": "Saint Petersburg", "lat": 59.9343, "lon": 30.3351}, {"name": "厄尔布鲁士", "en": "Elbrus", "lat": 43.35, "lon": 42.44}, {"name": "摩尔曼斯克", "en": "Murmansk", "lat": 68.9585, "lon": 33.0827}]},
-  "日本": {"en": "Japan", "iso": "392", "cities": [{"name": "京都", "en": "Kyoto", "lat": 35.0116, "lon": 135.7681}, {"name": "东京", "en": "Tokyo", "lat": 35.6762, "lon": 139.6503}]},
+  "日本": {"en": "Japan", "iso": "392", "cities": [{"name": "京都", "en": "Kyoto", "lat": 35.0116, "lon": 135.7681}, {"name": "东京", "en": "Tokyo", "lat": 35.6762, "lon": 139.6503}, {"name": "大阪", "en": "Osaka", "lat": 34.6937, "lon": 135.5023}, {"name": "神户", "en": "Kobe", "lat": 34.6901, "lon": 135.1955}]},
   "阿联酋": {"en": "UAE", "iso": "784", "cities": [{"name": "迪拜", "en": "Dubai", "lat": 25.2048, "lon": 55.2708}, {"name": "阿布扎比", "en": "Abu Dhabi", "lat": 24.4539, "lon": 54.3773}]},
   "乌兹别克斯坦": {"en": "Uzbekistan", "iso": "860", "cities": [{"name": "塔什干", "en": "Tashkent", "lat": 41.2995, "lon": 69.2401}]},
   "土耳其": {"en": "Türkiye", "iso": "792", "cities": [{"name": "伊斯坦布尔", "en": "Istanbul", "lat": 41.0082, "lon": 28.9784}, {"name": "卡帕多奇亚", "en": "Cappadocia", "lat": 38.6431, "lon": 34.8289}]},

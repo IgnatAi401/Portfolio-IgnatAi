@@ -17,12 +17,13 @@
 <body>
 <header class="top">
   <div class="brand">IGNAT</div>
-  <div class="top-actions"><nav><a href="#" aria-current="page" data-i18n="作品">作品</a><a href="#" data-i18n="关于">关于</a><a href="https://me.ignat.ai" target="_blank" rel="noopener noreferrer" data-i18n="联系">联系</a><button id="editToggle" aria-pressed="false" hidden data-i18n="编辑模式">编辑模式</button></nav>
+  <div class="top-actions"><nav><span class="view-tabs"><span class="view-thumb" aria-hidden="true"></span><a href="#work" data-view="work" aria-current="page" data-i18n="作品">作品</a><a href="#stories" data-view="stories" data-i18n="故事">故事</a></span><a href="https://me.ignat.ai" target="_blank" rel="noopener noreferrer" data-i18n="联系">联系</a><button id="editToggle" aria-pressed="false" hidden data-i18n="编辑模式">编辑模式</button></nav>
   <button type="button" class="lang-toggle" id="languageToggle" data-lang="zh" aria-label="Switch to English" title="Switch to English">
     <svg class="lang-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M22.401 4.818h-9.927L10.927 0H1.599C.72 0 .002.719.002 1.599v16.275c0 .878.72 1.597 1.597 1.597h10L13.072 24H22.4c.878 0 1.597-.707 1.597-1.572V6.39c0-.865-.72-1.572-1.597-1.572zm-15.66 8.68c-2.07 0-3.75-1.68-3.75-3.75 0-2.07 1.68-3.75 3.75-3.75 1.012 0 1.86.375 2.512.976l-.99.952a2.194 2.194 0 0 0-1.522-.584c-1.305 0-2.363 1.08-2.363 2.409S5.436 12.16 6.74 12.16c1.507 0 2.13-1.08 2.19-1.808l-2.188-.002V9.066h3.51c.05.23.09.457.09.764 0 2.147-1.434 3.669-3.602 3.669zm16.757 8.93c0 .59-.492 1.072-1.097 1.072h-8.875l3.649-4.03h.005l-.74-2.302.006-.005s.568-.488 1.277-1.24c.712.771 1.63 1.699 2.818 2.805l.771-.772c-1.272-1.154-2.204-2.07-2.89-2.805.919-1.087 1.852-2.455 2.049-3.707h2.034v.002h.002v-.94h-4.532v-1.52h-1.471v1.52H14.3l-1.672-5.21.006.022h9.767c.605 0 1.097.48 1.097 1.072v16.038zm-6.484-7.311c-.536.548-.943.873-.943.873l-.008.004-1.46-4.548h4.764c-.307 1.084-.988 2.108-1.651 2.904-1.176-1.392-1.18-1.844-1.18-1.844h-1.222s.05.678 1.7 2.61z"/></svg>
     <span class="lang-options" aria-hidden="true"><span class="lang-thumb"></span><span class="opt" data-opt="en">EN</span><span class="opt" data-opt="zh">中</span></span>
   </button></div>
 </header>
+<p class="top-note" data-i18n="© Ignat · 所有照片由 Ignat 拍摄，未经允许禁止商用。">© Ignat · 所有照片由 Ignat 拍摄，未经允许禁止商用。</p>
 
 <!-- 地图 -->
 <section class="atlas" aria-label="拍摄地点地图" data-i18n-aria-label="拍摄地点地图">
@@ -31,7 +32,7 @@
     <canvas id="mapCanvas" width="2400" height="1144" aria-hidden="true"></canvas>
     <svg id="mapSvg"></svg>
     <div class="loading" id="mapLoading" data-i18n="正在冲洗地图……">正在冲洗地图……</div>
-    <div class="title"><h1>Places<br>&amp; Frames</h1><p data-i18n="走过的地方，拍下的底片">走过的地方，拍下的底片</p></div>
+    <div class="title"><h1 id="mapTitle">Places<br>&amp; Frames</h1><p id="mapSub" data-i18n="走过的地方，拍下的底片">走过的地方，拍下的底片</p></div>
     <div class="tip" id="tip"></div>
   </div>
   <div class="edge bot"><span id="edgeCoord"></span></div>
@@ -42,7 +43,7 @@
   <div class="filter-row"><span class="filter-label" data-i18n="国家">国家</span><div class="rolls" id="rolls" role="group" aria-label="按国家筛选" data-i18n-aria-label="按国家筛选"></div></div>
   <div class="filter-row" id="cityRow" hidden><span class="filter-label" data-i18n="城市">城市</span><div class="rolls" id="cities" role="group" aria-label="按城市筛选" data-i18n-aria-label="按城市筛选"></div></div>
   <div class="filter-row filter-bottom">
-    <span class="filter-label" data-i18n="类别">类别</span>
+    <span class="filter-label" id="typeLabel" data-i18n="类别">类别</span>
     <div class="toggle" id="toggle" role="group" aria-label="按类别筛选" data-i18n-aria-label="按类别筛选">
       <button data-type="all" aria-pressed="true" data-i18n="全部类别">全部类别</button>
       <button data-type="人文" aria-pressed="false" data-i18n="人文">人文</button>
@@ -59,11 +60,15 @@
 
 <div class="loupe" id="loupe" aria-hidden="true"><div class="inner" id="loupeInner"></div></div>
 
+<!-- 故事阅读页 -->
+<div class="rd" id="rd" role="dialog" aria-modal="true" aria-label="故事" data-i18n-aria-label="故事" aria-hidden="true"></div>
+
 <!-- 取景器 -->
 <div class="vf" id="vf" role="dialog" aria-modal="true" aria-label="全屏看图" data-i18n-aria-label="全屏看图" aria-hidden="true">
   <div class="bg" id="vfBg"></div>
   <img class="photo" id="vfPreview" alt="" hidden>
   <img class="photo" id="vfImg" alt="" hidden>
+  <button class="vlive" id="vfLive" hidden aria-label="播放实况" data-i18n-aria-label="播放实况">LIVE</button>
   <div class="vstatus" id="vfStatus" role="status"><span id="vfLoadText"></span><button id="vfRetry" hidden data-i18n="重新加载">重新加载</button></div>
   <div class="frm" aria-hidden="true"><i></i><i></i><i></i><i></i><div class="af" id="vfAf"></div></div>
   <div class="vtop"><span><span id="vfRoll"></span><span class="filt" id="vfFilt"></span></span><button class="vclose" id="vfClose" data-i18n="关闭（Esc）">关闭（Esc）</button></div>
