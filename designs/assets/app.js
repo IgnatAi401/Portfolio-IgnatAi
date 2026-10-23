@@ -353,10 +353,13 @@
       }
       i = j;
     }
-    return strips.join("");
+    return strips;
   }
 
+  let sheetObserver = null, appendSheetBatch = null;
   function renderSheet() {
+    sheetObserver?.disconnect();
+    appendSheetBatch = null;
     const list = litList();
     const nCity = new Set(list.filter(p => p.city).map(p => `${p.country}/${p.city}`)).size;
     const pending = canEdit && PEND.length ? `
@@ -365,15 +368,40 @@
           <h2>${t("待审核")}<small>${t("pendingCount", { count: PEND.length })}</small></h2>
           <span class="note">${t("点开一张，在右侧核对信息，再点「审核通过」")}</span>
         </div>
-        <div class="strips">${stripsHTML(PEND)}</div>
+        <div class="strips">${stripsHTML(PEND).join("")}</div>
       </section>` : "";
     $("sheet").innerHTML = pending + `
       <div class="sheet-head">
         <h2>Proof ${years(list)}<small>${t("proofCount", { cities: nCity, count: list.length })}</small></h2>
 
       </div>
-      <div class="strips">${list.length ? stripsHTML(list) : `<div class="empty">${t("当前条件下没有照片，可切换类别、城市或重置筛选。")}</div>`}</div>`;
-    frames = [...$("sheet").querySelectorAll(".frame[data-id]")];
+      <div class="strips">${list.length ? "" : `<div class="empty">${t("当前条件下没有照片，可切换类别、城市或重置筛选。")}</div>`}</div>`;
+    const strips = stripsHTML(list);
+    const container = $("sheet").lastElementChild;
+    const sentinel = document.createElement("button");
+    sentinel.type = "button";
+    sentinel.textContent = I18N.language === "en" ? "Load more" : "加载更多";
+    sentinel.className = "sheet-more";
+    let offset = 0;
+    appendSheetBatch = () => {
+      container.insertAdjacentHTML("beforeend", strips.slice(offset, offset + 8).join(""));
+      offset += 8;
+      frames = [...$("sheet").querySelectorAll(".frame[data-id]")];
+      if (offset >= strips.length) { sentinel.remove(); sheetObserver?.disconnect(); appendSheetBatch = null; }
+    };
+    appendSheetBatch();
+    if (appendSheetBatch) {
+      container.after(sentinel);
+      sentinel.addEventListener("click", () => appendSheetBatch?.());
+      sheetObserver = new IntersectionObserver(entries => {
+        if (entries.some(e => e.isIntersecting)) {
+          appendSheetBatch?.();
+          // Reobserve after layout so short batches continue filling the viewport.
+          if (sentinel.isConnected) { sheetObserver.unobserve(sentinel); requestAnimationFrame(() => { if (sentinel.isConnected) sheetObserver?.observe(sentinel); }); }
+        }
+      }, { rootMargin: "800px" });
+      sheetObserver.observe(sentinel);
+    }
     hideLoupe();
     sheetDirty = false;
   }
@@ -477,6 +505,8 @@
   // 按日期从新到旧
   const storyList = () => storyOf(state.country, state.city).sort((a, b) => (b.date || "").localeCompare(a.date || ""));
   function renderStories() {
+    sheetObserver?.disconnect();
+    appendSheetBatch = null;
     const list = storyList();
     $("sheet").innerHTML = `
       <div class="sheet-head">
@@ -717,9 +747,23 @@
 
   // 网址：#stories 是故事页，#stories/<id> 再打开那篇的阅读页，其他都是作品页
   let routed = false;
-  function route() {
+  let storiesLoaded = false, storiesLoading = null, routeVersion = 0;
+  function ensureStories() {
+    if (storiesLoaded) return Promise.resolve();
+    return storiesLoading ||= fetch("shared/stories.json", { cache: canEdit ? "no-store" : "default" })
+      .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(j => { buildStories(j.stories || []); storiesLoaded = true; })
+      .finally(() => { storiesLoading = null; });
+  }
+  async function route() {
+    const version = ++routeVersion;
     const [view, id] = location.hash.slice(1).split("/");
     const v = view === "stories" ? "stories" : "work";
+    if (v === "stories" && !storiesLoaded) {
+      try { await ensureStories(); }
+      catch { if (version === routeVersion) $("sheet").textContent = I18N.language === "en" ? "Could not load stories. Please refresh to retry." : "故事加载失败，请刷新重试。"; return; }
+      if (version !== routeVersion) return;
+    }
     if (!routed || v !== state.view) { routed = true; setView(v); }
     const s = v === "stories" && id && STORIES.find(x => x.id === decodeURIComponent(id));
     if (s) rdOpen(s); else { rdPushed = false; rdClose(); }
@@ -965,6 +1009,7 @@
     zoomReset();
     viewerStatus("");
     if (sheetDirty) applyFilter();
+    while (cur && !cur.story && !frames.some(f => f.dataset.id === cur.id) && appendSheetBatch) appendSheetBatch();
     const f = cur && frames.find(f => f.dataset.id === cur.id);
     if (f) { f.scrollIntoView({ block: "nearest", behavior: "instant" }); f.classList.remove("flash"); void f.offsetWidth; f.classList.add("flash"); }
     const focus = f?.querySelector(".win") || lastFocus;
@@ -1265,9 +1310,9 @@
       return;
     }
     // 故事数据单独一个文件；读不到时故事页显示为空，不影响作品页
-    const rawStories = await fetch("shared/stories.json", { cache: "no-store" }).then(r => r.ok ? r.json() : { stories: [] }).then(j => j.stories || []).catch(() => []);
+
     derive();
-    buildStories(rawStories);
+
     $("edgeYears").textContent = `IGNAT ATLAS ▸ ${years(ORDER)}`;
     $("edgeCount").textContent = `${COUNTRIES.length} ${COUNTRIES.length > 1 ? "COUNTRIES" : "COUNTRY"} / ${ORDER.length} EXP`;
     renderBar();
