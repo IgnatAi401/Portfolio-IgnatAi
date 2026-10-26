@@ -489,7 +489,7 @@
   function storyCardHTML(s, i) {
     const date = (s.date || "").replaceAll("-", ".");
     const place = [countryLabel(s.country), cityLabel(s.city, s.country)].filter(Boolean).join(" · ");
-    const text = storyText(s, "text");
+    const text = storyText(s, "text").replace(/^\[图\]$/gm, "").replace(/\n{3,}/g, "\n\n").trim();
     return `
       <article class="story${s.media.length ? "" : " textonly"}" data-i="${i}" data-story="${esc(s.id)}">
         <div class="sedge"><span>${esc(date)}</span><span>${esc(place)}</span></div>
@@ -602,6 +602,12 @@
       flow = `<textarea class="rd-in rd-body" data-sk="text" rows="6" placeholder="${t("正文：空一行分段")}">${esc(s.text || "")}</textarea>
         <div class="ed-s" id="rdStatus" role="status">${esc(storyStatus.msg)}</div>
         ${rows.map(r => rowHTML(r)).join("")}`;
+    } else if (paras.includes("[图]")) {
+      // 正文里单独一段写 [图]，就在那里放下一行图（一行几张看 layout），图文就能对上；多出来的图排在最后
+      let k = 0;
+      flow = paras.map(x => x === "[图]" ? (rows[k] ? rowHTML(rows[k++]) : "") : `<p>${esc(x)}</p>`).join("");
+      const left = rows.slice(k);
+      if (left.length) more = `<section class="rd-more"><div class="rd-sec" aria-hidden="true"></div>${left.map(r => rowHTML(r)).join("")}</section>`;
     } else {
       const gaps = Math.max(0, paras.length - 1);
       const stops = Math.min(rows.length, Math.ceil(gaps / 2));
