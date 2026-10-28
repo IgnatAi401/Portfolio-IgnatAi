@@ -467,11 +467,22 @@
   const caption = p => I18N.language === "en" && p.titleEn || p.title;
 
   // 每行几张：数据里写了 layout（如 [1, 3]）就照着排，否则按张数自动排；放不下的在最后一张上标 +N
+  // 卡片只是预览：layout 只取开头几行（合计不超过 CARD_MAX 张），长故事的整套排版留给阅读页
+  const CARD_MAX = 5;
   const autoRows = n => n <= 2 ? [n] : n === 3 ? [1, 2] : n === 4 ? [2, 2] : [2, 3];
+  function cardRows(layout) {
+    const rows = [];
+    let sum = 0;
+    for (const n of layout) {
+      if (rows.length && sum + n > CARD_MAX) break;
+      rows.push(n); sum += n;
+    }
+    return rows;
+  }
   function mediaHTML(s) {
     const items = s.media;
     if (!items.length) return "";
-    const rows = s.layout?.length ? s.layout : autoRows(items.length);
+    const rows = s.layout?.length ? cardRows(s.layout) : autoRows(items.length);
     const shown = Math.min(items.length, rows.reduce((a, b) => a + b, 0));
     let k = 0;
     return `<div class="smedia">${rows.map(n => {
