@@ -482,7 +482,9 @@
   function mediaHTML(s) {
     const items = s.media;
     if (!items.length) return "";
-    const rows = s.layout?.length ? cardRows(s.layout) : autoRows(items.length);
+    // cardLayout 只管卡片，阅读页仍按 layout
+    const lay = s.cardLayout?.length ? s.cardLayout : s.layout;
+    const rows = lay?.length ? cardRows(lay) : autoRows(items.length);
     const shown = Math.min(items.length, rows.reduce((a, b) => a + b, 0));
     let k = 0;
     return `<div class="smedia">${rows.map(n => {
