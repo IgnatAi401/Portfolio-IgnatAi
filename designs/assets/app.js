@@ -443,11 +443,12 @@
   /* ———————— 故事：一篇一张卡片，按日期从新到旧，瀑布流排列 ———————— */
   // 故事里的每张图都包成独立对象：可以引用作品照片（photo），也可以是故事自己的随手拍（src）。
   // 故事页只讲经过，不带拍摄参数，也不进作品、地图和筛选的计数。
-  // raw 是 stories.json 里的原始数据，编辑模式改完整份写回；页面用的对象通过 raw 指回原数据
+  // raw 是 stories.json 里的原始数据，编辑模式改的是它，再只把改过的字段发给服务器；页面用的对象通过 raw 指回原数据
   let STORY_RAW = [];
   function buildStories(raw) {
     MEDIA = new Map();
     STORY_RAW = raw;
+    snapStories();
     STORIES = raw.map(src => {
       const s = { ...src, raw: src };
       s.media = (src.media || []).map((m, i) => {
@@ -595,7 +596,7 @@
     const ed = canEdit && editing;
     const n = s.media.length;
     const cap = p => {
-      if (ed) return `<input class="rd-in rd-cap" data-mi="${s.media.indexOf(p)}" value="${esc(p.title)}" placeholder="${t("配图标题（可留空）")}">`;
+      if (ed) return `<input class="rd-in rd-cap" data-mi="${s.raw.media.indexOf(p.raw)}" value="${esc(p.title)}" placeholder="${t("配图标题（可留空）")}">`;
       return caption(p) ? `<figcaption>${esc(caption(p))}</figcaption>` : "";
     };
     const shot = (p, full) => {
@@ -612,9 +613,13 @@
     const rows = readerRows(s.media, s.layout);
     let flow = "", more = "";
     if (ed) {
-      flow = `<textarea class="rd-in rd-body" data-sk="text" rows="6" placeholder="${t("正文：空一行分段")}">${esc(s.text || "")}</textarea>
-        <div class="ed-s" id="rdStatus" role="status">${esc(storyStatus.msg)}</div>
-        ${rows.map(r => rowHTML(r)).join("")}`;
+      // 和阅读时一样按 [图] 分段：每段文字一个输入框，图排在对应的 [图] 位置；保存时再用 [图] 拼回正文
+      const segs = [[]];
+      (s.text || "").split(/\n\s*\n/).map(x => x.trim()).filter(Boolean).forEach(x => x === "[图]" ? segs.push([]) : segs.at(-1).push(x));
+      const seg = (x, i) => `<textarea class="rd-in rd-body rd-seg" rows="${x.length ? 3 : 1}" placeholder="${t(i ? "这一段可留空" : "正文：空一行分段")}">${esc(x.join("\n\n"))}</textarea>`;
+      flow = segs.map((x, i) => (i ? rows[i - 1] ? rowHTML(rows[i - 1]) : `<div class="rd-miss">${t("这个 [图] 没有对应的图")}</div>` : "") + seg(x, i)).join("");
+      const left = rows.slice(segs.length - 1);
+      if (left.length) more = `<section class="rd-more"><div class="rd-sec" aria-hidden="true"><span>${t(segs.length > 1 ? "没排进正文的图，阅读时排在最后" : "正文里没写 [图]，阅读时这些图会自动插在段落之间")}</span></div>${left.map(r => rowHTML(r)).join("")}</section>`;
     } else if (paras.includes("[图]")) {
       // 正文里单独一段写 [图]，就在那里放下一行图（一行几张看 layout），图文就能对上；多出来的图排在最后
       let k = 0;
@@ -645,14 +650,17 @@
       const c = x.media[0];
       return `<button class="rd-go ${dir}" data-story="${esc(x.id)}">${c ? `<img src="${esc(thumbSrc(c))}" alt="" loading="lazy" decoding="async">` : ""}<span><small>${t(dir === "prev" ? "上一篇" : "下一篇")}</small><b>${esc(storyText(x, "title"))}</b><em>${esc((x.date || "").replaceAll("-", "."))}　${esc([countryLabel(x.country), cityLabel(x.city, x.country)].filter(Boolean).join(" · "))}</em></span></button>`;
     };
+    const layIn = (k, ph) => `<label>${t(k === "layout" ? "阅读页每行几张" : "卡片每行几张")}<input class="rd-in rd-lay" data-lay="${k}" value="${esc((s.raw[k] || []).join(" "))}" placeholder="${t(ph)}" inputmode="numeric"></label>`;
+    const layHTML = ed ? `<div class="rd-lays">${layIn("layout", "自动")}${layIn("cardLayout", "同阅读页")}<small>${t("layHint", { count: n })}</small></div>` : "";
     return `
-      <div class="rd-bar"><button class="rd-back" id="rdClose">← ${t("返回故事")}</button><span class="rd-where"><span>${esc(date)}　${esc(place)}</span><b>${esc(storyText(s, "title"))}</b></span><span class="rd-tools">${canEdit ? `<button class="rd-edit" id="rdEdit" aria-pressed="${ed}">${t("编辑模式")}</button>` : ""}<span class="rd-esc">Esc</span></span><i class="rd-prog" aria-hidden="true"></i></div>
+      <div class="rd-bar"><button class="rd-back" id="rdClose">← ${t("返回故事")}</button><span class="rd-where"><span>${esc(date)}　${esc(place)}</span><b>${esc(storyText(s, "title"))}</b></span><span class="rd-tools">${ed ? `<span class="ed-s${storyStatus.err ? " err" : ""}" id="rdStatus" role="status" title="${esc(storyStatus.msg)}">${esc(storyStatus.msg)}</span>` : ""}${canEdit ? `<button class="rd-edit" id="rdEdit" aria-pressed="${ed}">${t("编辑模式")}</button>` : ""}<span class="rd-esc">Esc</span></span><i class="rd-prog" aria-hidden="true"></i></div>
       <article class="rd-art${n ? "" : " textonly"}${ed ? " editing" : ""}">
         <header class="rd-head">
           <div class="rd-edge"><span>${esc(date)}</span><span>${esc(place)}</span></div>
           ${s.placeholder ? `<span class="sflag">${t("占位")}</span>` : ""}
           ${ed ? `<textarea class="rd-in rd-title" data-sk="title" rows="1" placeholder="${t("故事标题")}">${esc(s.title || "")}</textarea>`
             : `<h1>${esc(storyText(s, "title"))}</h1>`}
+          ${layHTML}
         </header>
         <div class="rd-flow">${flow}</div>
         ${more}
@@ -752,17 +760,43 @@
   rd.addEventListener("input", e => {
     const el = e.target, s = rdStory;
     if (!s || !el.matches?.(".rd-in")) return;
-    const v = el.dataset.sk === "text" ? el.value.trim() : el.value.trim().replace(/\s+/g, " ");
-    if (el.dataset.sk) s[el.dataset.sk] = s.raw[el.dataset.sk] = v;
-    else {
-      const p = s.media[+el.dataset.mi];
-      if (!p) return;
-      p.title = p.raw.caption = v;
+    if (el.dataset.lay) return;
+    if (el.matches(".rd-seg")) {
+      // 各段拼回正文，段与段之间放回 [图]；空段只留下 [图]
+      const segs = [...rd.querySelectorAll(".rd-seg")].map(x => x.value.trim());
+      s.text = s.raw.text = segs.flatMap((x, i) => i ? ["[图]", x] : [x]).filter(Boolean).join("\n\n");
+      markStory(s, "text");
+    } else if (el.dataset.sk) {
+      s[el.dataset.sk] = s.raw[el.dataset.sk] = el.value.trim().replace(/\s+/g, " ");
+      markStory(s, el.dataset.sk);
+    } else {
+      const m = s.raw.media[+el.dataset.mi], p = s.media.find(x => x.raw === m);
+      if (!m) return;
+      const v = el.value.trim().replace(/\s+/g, " ");
+      if (v) m.caption = v; else delete m.caption;
+      if (p) p.title = v;
+      markStory(s, null, +el.dataset.mi);
     }
     if (el.tagName === "TEXTAREA") grow(el);
     storiesDirty = true;
     scheduleStorySave();
   });
+
+  // 排版：写每行几张（如 1 3 2），留空回到自动；改完离开输入框或按回车就按新排版重画
+  rd.addEventListener("change", e => {
+    const el = e.target, s = rdStory, k = el.dataset?.lay;
+    if (!s || !k) return;
+    const nums = el.value.trim() ? el.value.trim().split(/[\s,，、]+/).map(Number) : [];
+    if (nums.some(x => !Number.isInteger(x) || x < 1 || x > 6)) return setStoryStatus(t("排版要写成每行几张，如 1 3 2（每行 1～6 张）"), true);
+    if (nums.length) s[k] = s.raw[k] = nums; else { delete s[k]; delete s.raw[k]; }
+    markStory(s, k);
+    storiesDirty = true;
+    scheduleStorySave();
+    const top = rd.scrollTop;
+    rdOpen(s);
+    rd.scrollTop = top;
+  });
+  rd.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.dataset?.lay) e.target.blur(); });
 
   // 网址：#stories 是故事页，#stories/<id> 再打开那篇的阅读页，其他都是作品页
   let routed = false;
@@ -1208,6 +1242,7 @@
   function edited(k, v) {
     LIT = null;
     cur[k] = v;
+    markPhoto(cur, k);
     if (["taken", "city", "country"].includes(k)) derive();
     if (["city", "type"].includes(k)) renderBar();
     paintViewer(cur);
@@ -1234,6 +1269,7 @@
   $("edApprove").onclick = () => {
     const i = PEND.indexOf(cur);
     delete cur.review;
+    markPhoto(cur, "review");
     LIT = null;
     derive(); renderBar();
     sheetDirty = true;
@@ -1248,38 +1284,87 @@
     const name = (prompt(t("addCity", { country: countryLabel(cur.country) })) || "").trim();
     if (!name) return;
     const meta = DB.countries[cur.country] ||= { en: "", iso: "", cities: [] };
-    if (!meta.cities.some(c => c.name === name)) meta.cities.push({ name, en: "", lat: null, lon: null });
+    if (!meta.cities.some(c => c.name === name)) {
+      const city = { name, en: "", lat: null, lon: null };
+      meta.cities.push(city);
+      (NEW_CITIES[cur.country] ||= []).push(city);
+    }
     edited("city", name);
     fillEditor(cur);
   });
 
-  // 自动保存：停手 0.6 秒后把整份数据写回服务器
-  let saveTimer = null, saveChain = Promise.resolve();
+  // 自动保存：停手 0.6 秒后只把改过的字段发给服务器，服务器读最新的文件再合并进去，
+  // 所以脚本或 AI 同时改了别的照片、别的故事、别的字段都不会被冲掉。
+  // base 是上次和文件对上时的值：同一项两边都改了，服务器保留文件里的，页面这份存进 backups/conflicts-*.json
+  let saveTimer = null, saveChain = Promise.resolve(), saving = 0, VERSION = null;
+  const PHOTO_DIRTY = new Map(), STORY_DIRTY = new Map();
+  let PHOTO_BASE = new Map(), STORY_BASE = new Map(), NEW_CITIES = {};
+  const clone = v => v === undefined ? null : JSON.parse(JSON.stringify(v));
+  const snapPhotos = () => { PHOTO_BASE = new Map(DB.photos.map(p => [p.id, clone(p)])); };
+  const snapStories = () => { STORY_BASE = new Map(STORY_RAW.map(s => [s.id, clone(s)])); };
+  function markPhoto(p, k) {
+    if (!PHOTO_DIRTY.has(p.id)) PHOTO_DIRTY.set(p.id, new Set());
+    PHOTO_DIRTY.get(p.id).add(k);
+  }
+  function markStory(s, k, mi) {
+    if (!STORY_DIRTY.has(s.id)) STORY_DIRTY.set(s.id, { keys: new Set(), caps: new Set() });
+    const d = STORY_DIRTY.get(s.id);
+    if (k) d.keys.add(k); else d.caps.add(mi);
+  }
+  const stamp = () => new Date().toLocaleTimeString(I18N.language === "en" ? "en-GB" : "zh-CN", { hour12: false });
   const status = (msg, err = false) => { $("edStatus").textContent = msg; $("edStatus").classList.toggle("err", err); };
   function scheduleSave() {
     status(t("有改动，马上保存…"));
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => { saveTimer = null; saveNow(); }, 600);
   }
-  function saveNow() {
-    const body = JSON.stringify(DB);
+  // 发出去之后才清掉改动记录；失败了放回去，下次改动时一起重发
+  function send(url, payload, show, done, restore) {
+    saving++;
     saveChain = saveChain.then(async () => {
+      let reload = false;
       try {
-        const r = await fetch("/api/photos", { method: "PUT", headers: { "Content-Type": "application/json" }, body });
-        if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || `HTTP ${r.status}`);
-        status(t("saved", { time: new Date().toLocaleTimeString(I18N.language === "en" ? "en-GB" : "zh-CN", { hour12: false }) }));
+        const r = await fetch(url, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...payload, version: VERSION }) });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
+        done();
+        // 文件在这之前被别处改过：先记成未知版本，下面重新载入
+        VERSION = j.stale ? null : j.version;
+        if (j.conflicts?.length) show(t("conflict", { count: j.conflicts.length }), true);
+        else show(t("saved", { time: stamp() }));
+        reload = j.stale || !!j.conflicts?.length;
       } catch (err) {
-        status(t("saveFailed", { error: err.message }), true);
-      }
+        restore();
+        show(t("saveFailed", { error: err.message }), true);
+      } finally { saving--; }
+      if (reload) await syncFromDisk();
     });
   }
-  // 故事单独存到 /api/stories，状态显示在阅读页里
+  function saveNow() {
+    if (!PHOTO_DIRTY.size && !Object.keys(NEW_CITIES).length) return;
+    const photos = [...PHOTO_DIRTY].filter(([id]) => PHOTOS.has(id)).map(([id, keys]) => {
+      const p = PHOTOS.get(id), b = PHOTO_BASE.get(id) || {}, set = {}, base = {};
+      // 审核通过 = review 设成 false，服务器会去掉这个标记
+      keys.forEach(k => { set[k] = k === "review" ? !!p.review : clone(p[k]); base[k] = clone(b[k]); });
+      return { id, set, base };
+    });
+    const dirty = new Map(PHOTO_DIRTY), cities = NEW_CITIES;
+    PHOTO_DIRTY.clear(); NEW_CITIES = {};
+    send("/api/photos", { photos, cities }, status, () => photos.forEach(c => {
+      const b = PHOTO_BASE.get(c.id);
+      if (b) Object.entries(c.set).forEach(([k, v]) => { b[k] = k === "review" && !v ? null : v; });
+    }), () => {
+      dirty.forEach((keys, id) => keys.forEach(k => markPhoto({ id }, k)));
+      Object.entries(cities).forEach(([c, list]) => (NEW_CITIES[c] ||= []).push(...list));
+    });
+  }
+  // 故事单独存到 /api/stories，状态显示在阅读页顶栏
   let storyTimer = null, storiesDirty = false;
-  const storyStatus = { msg: "" };
+  const storyStatus = { msg: "", err: false };
   const setStoryStatus = (msg, err = false) => {
-    storyStatus.msg = msg;
+    Object.assign(storyStatus, { msg, err });
     const el = $("rdStatus");
-    if (el) { el.textContent = msg; el.classList.toggle("err", err); }
+    if (el) { el.textContent = el.title = msg; el.classList.toggle("err", err); }
   };
   function scheduleStorySave() {
     setStoryStatus(t("有改动，马上保存…"));
@@ -1287,16 +1372,64 @@
     storyTimer = setTimeout(() => { storyTimer = null; saveStoriesNow(); }, 600);
   }
   function saveStoriesNow() {
-    const body = JSON.stringify({ stories: STORY_RAW });
-    saveChain = saveChain.then(async () => {
-      try {
-        const r = await fetch("/api/stories", { method: "PUT", headers: { "Content-Type": "application/json" }, body });
-        if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || `HTTP ${r.status}`);
-        setStoryStatus(t("saved", { time: new Date().toLocaleTimeString(I18N.language === "en" ? "en-GB" : "zh-CN", { hour12: false }) }));
-      } catch (err) {
-        setStoryStatus(t("saveFailed", { error: err.message }), true);
-      }
+    if (!STORY_DIRTY.size) return;
+    const stories = [...STORY_DIRTY].map(([id, d]) => {
+      const raw = STORY_RAW.find(s => s.id === id), b = STORY_BASE.get(id) || {}, set = {}, base = {};
+      d.keys.forEach(k => { set[k] = clone(raw[k]); base[k] = clone(b[k]); });
+      const captions = [...d.caps].map(i => {
+        const m = raw.media[i];
+        return { key: m.photo || m.src, i, caption: m.caption || "", base: b.media?.[i]?.caption || "" };
+      });
+      return { id, set, base, captions };
     });
+    const dirty = new Map(STORY_DIRTY);
+    STORY_DIRTY.clear();
+    send("/api/stories", { stories }, setStoryStatus, () => stories.forEach(c => {
+      const b = STORY_BASE.get(c.id);
+      if (!b) return;
+      Object.assign(b, clone(c.set));
+      c.captions.forEach(x => { if (b.media?.[x.i]) b.media[x.i].caption = x.caption; });
+    }), () => dirty.forEach((d, id) => {
+      d.keys.forEach(k => markStory({ id }, k));
+      d.caps.forEach(i => markStory({ id }, null, i));
+    }));
+  }
+
+  // 文件被别处改了（脚本、AI、另一个标签页）：没有待保存的改动、也没在输入框里打字时，重新读文件刷新页面
+  const busy = () => saveTimer || storyTimer || saving;
+  const typing = () => document.activeElement?.matches?.(".rd-in, #ed input, #ed textarea");
+  const getJSON = url => fetch(url, { cache: "no-store" }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
+  async function syncFromDisk() {
+    if (busy() || typing()) { VERSION = null; return; }
+    const v = await getJSON("/api/version");
+    const [db, st] = await Promise.all([getJSON("shared/photos.json"), storiesLoaded ? getJSON("shared/stories.json") : null]);
+    if (busy()) { VERSION = null; return; }
+    DB = db; derive(); snapPhotos();
+    if (st) buildStories(st.stories || []);
+    else if (storiesLoaded) buildStories(STORY_RAW);
+    VERSION = v;
+    refreshViews();
+  }
+  function refreshViews() {
+    const rdOpenNow = rd.classList.contains("open"), vfOpenNow = vf.classList.contains("open");
+    // 阅读页或看图开着时，背后的列表等关掉再重画，免得滚动位置乱跳
+    if (rdOpenNow || vfOpenNow) { renderBar(); sheetDirty = storiesDirty = true; }
+    else { renderBar(); renderMain(); }
+    if (rdOpenNow && rdStory) {
+      const s = STORIES.find(x => x.id === rdStory.id);
+      if (s) { const top = rd.scrollTop; rdStory = s; rdOpen(s); rd.scrollTop = top; }
+    }
+    if (vfOpenNow && cur) {
+      const p = byId(cur.id);
+      if (p) { cur = p; paintViewer(p); syncEditor(); }
+    }
+  }
+  async function pollDisk() {
+    if (document.hidden || busy()) return;
+    try {
+      const v = await getJSON("/api/version");
+      if (!VERSION || v.photos !== VERSION.photos || (storiesLoaded && v.stories !== VERSION.stories)) await syncFromDisk();
+    } catch {}
   }
   addEventListener("beforeunload", e => { if (saveTimer || storyTimer) { e.preventDefault(); e.returnValue = ""; } });
 
@@ -1342,6 +1475,9 @@
       if (!j || !j.ok) return;
       canEdit = true;
       $("editToggle").hidden = false;
+      snapPhotos();
+      getJSON("/api/version").then(v => { VERSION ||= v; }).catch(() => {});
+      setInterval(pollDisk, 3000);
       if (PEND.length) applyFilter();
       let saved = false; try { saved = localStorage.getItem("ignat-edit") === "1"; } catch {}
       setEditing(saved);

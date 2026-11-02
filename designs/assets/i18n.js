@@ -37,6 +37,13 @@ const I18N = (() => {
     "大图加载失败，暂时显示预览": "Full image unavailable; showing preview", "正在加载大图……": "Loading full image…",
     "有改动，马上保存…": "Saving changes…",
     "故事标题": "Story title", "正文：空一行分段": "Story text (blank line between paragraphs)", "配图标题（可留空）": "Photo caption (optional)",
+    "这一段可留空": "This section can stay empty", "这个 [图] 没有对应的图": "This [图] marker has no photos left to place",
+    "没排进正文的图，阅读时排在最后": "Photos not placed in the text; shown at the end",
+    "正文里没写 [图]，阅读时这些图会自动插在段落之间": "No [图] markers in the text, so these photos are spread between paragraphs automatically",
+    "阅读页每行几张": "Photos per row (story)", "卡片每行几张": "Photos per row (card)", "自动": "auto", "同阅读页": "same as story",
+    "排版要写成每行几张，如 1 3 2（每行 1～6 张）": "Write photos per row, e.g. 1 3 2 (1–6 per row)",
+    "layHint": "{count} photos. Leave blank for automatic layout. A paragraph that is just [图] marks where the next row goes.",
+    "conflict": "{count} field(s) were also changed elsewhere; kept the file's version (yours is in backups/conflicts-*.json). Reloaded.",
     "读不到 shared/photos.json。请用预览服务器打开（不要直接双击 html 文件）。": "Unable to read shared/photos.json. Open this page through the preview server.",
     "地图暂时无法加载，请刷新重试": "Map unavailable. Refresh to try again.",
     "走过的路，留下的故事": "Roads travelled, stories kept", "点击看这里的故事": "Click to read stories from here",
@@ -55,7 +62,9 @@ const I18N = (() => {
     pendingCount: "{count} 张，审核通过前不会出现在作品、地图和筛选里，也不会上线",
     frameNumber: "{pending}第 {number} 张", approved: "已通过，并入作品（还剩 {count} 张待审核）",
     addCity: "在「{country}」下面加一个新地点：", saved: "已保存 ✓ {time}",
-    saveFailed: "保存失败：{error}。请确认终端里的预览服务器还开着，再改一下任意一项重试。"
+    saveFailed: "保存失败：{error}。请确认终端里的预览服务器还开着，再改一下任意一项重试。",
+    layHint: "共 {count} 张图。留空就自动排；正文里单独一段写 [图]，就在那里放下一行图",
+    conflict: "有 {count} 处在别处也改过，已保留文件里的版本（你这边的存在 backups/conflicts-*.json），页面已重新载入"
   };
   function t(key, values = {}) {
     const dictionary = language === "en" ? messages : chinese;

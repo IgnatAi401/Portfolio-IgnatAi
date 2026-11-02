@@ -220,8 +220,14 @@
   .rd-title { margin: 18px 0 0; font-size: 30px; font-weight: 500; line-height: 1.3; text-align: center; }
   .rd-body { font-size: 16px; line-height: 1.95; }
   .rd-cap { margin-top: 6px; font-size: 12px; padding: 5px 7px; }
-  .rd-flow .ed-s { margin-top: 8px; font-size: 12px; color: var(--ink-dim); min-height: 1.5em; }
-  .rd-flow .ed-s.err { color: #ff8a7a; }
+  .rd-seg { margin: 14px 0; }
+  .rd-tools .ed-s { margin: 0; max-width: 24em; min-height: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--zh); }
+  .rd-lays { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px 18px; margin-top: 14px; font-size: 12px; color: var(--ink-dim); }
+  .rd-lays label { display: flex; align-items: center; gap: 8px; }
+  .rd-lays .rd-in { width: 7.5em; padding: 4px 7px; font-family: var(--mono); font-size: 12px; text-align: center; }
+  .rd-lays small { flex-basis: 100%; text-align: center; font-size: 11px; }
+  .rd-miss { margin: 10px 0; padding: 10px; border: 1px dashed #5a3a32; color: #ff8a7a; font-size: 12px; text-align: center; }
+  .rd-sec span { display: block; margin-top: 10px; font-size: 12px; color: var(--ink-dim); text-align: center; }
   /* 从故事打开的全屏看图：不显示拍摄参数 */
   .vf.casual .readout { display: none; }
 
@@ -367,6 +373,7 @@
     .stories, .scol { gap: 16px; }
     .rd-esc { display: none; }
     .rd-bar { grid-template-columns: auto 1fr auto; padding: 12px 16px; }
+    .rd-tools .ed-s { max-width: 9em; }
     .rd-where { max-width: none; }
     .rd-art { padding-top: 40px; }
     .rd-head { padding-bottom: 28px; margin-bottom: 28px; }
