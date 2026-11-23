@@ -503,7 +503,7 @@
   function storyCardHTML(s, i) {
     const date = (s.date || "").replaceAll("-", ".");
     const place = [countryLabel(s.country), cityLabel(s.city, s.country)].filter(Boolean).join(" · ");
-    const text = storyText(s, "text").replace(/^\[图\]$/gm, "").replace(/\n{3,}/g, "\n\n").trim();
+    const text = storyText(s, "text").replace(/^(\[图\]|#{2,3} .*)$/gm, "").replace(/\n{3,}/g, "\n\n").trim();
     return `
       <article class="story${s.media.length ? "" : " textonly"}" data-i="${i}" data-story="${esc(s.id)}">
         <div class="sedge"><span>${esc(date)}</span><span>${esc(place)}</span></div>
@@ -592,6 +592,11 @@
     const place = [countryLabel(s.country), cityLabel(s.city, s.country)].filter(Boolean).join(" · ");
     const body = storyText(s, "text");
     const paras = body.split(/\n\s*\n/).map(x => x.trim()).filter(Boolean);
+    // 单独一段以 "## " 开头是章节标题，"### " 是小节标题；其余是普通段落
+    const paraHTML = x => {
+      const h = x.match(/^(#{2,3}) +(.+)$/s);
+      return h ? `<h${h[1].length}>${esc(h[2])}</h${h[1].length}>` : `<p>${esc(x)}</p>`;
+    };
     // 编辑模式：标题、正文、配图标题都换成输入框，和照片编辑一样改的是中文原文
     const ed = canEdit && editing;
     const n = s.media.length;
@@ -623,7 +628,7 @@
     } else if (paras.includes("[图]")) {
       // 正文里单独一段写 [图]，就在那里放下一行图（一行几张看 layout），图文就能对上；多出来的图排在最后
       let k = 0;
-      flow = paras.map(x => x === "[图]" ? (rows[k] ? rowHTML(rows[k++]) : "") : `<p>${esc(x)}</p>`).join("");
+      flow = paras.map(x => x === "[图]" ? (rows[k] ? rowHTML(rows[k++]) : "") : paraHTML(x)).join("");
       const left = rows.slice(k);
       if (left.length) more = `<section class="rd-more"><div class="rd-sec" aria-hidden="true"></div>${left.map(r => rowHTML(r)).join("")}</section>`;
     } else {
@@ -635,7 +640,7 @@
         while (at.has(k) && k < gaps) k++;
         if (!at.has(k)) at.set(k, rows[at.size]);
       }
-      flow = paras.map((x, k) => `<p>${esc(x)}</p>${at.has(k + 1) ? rowHTML(at.get(k + 1)) : ""}`).join("");
+      flow = paras.map((x, k) => `${paraHTML(x)}${at.has(k + 1) ? rowHTML(at.get(k + 1)) : ""}`).join("");
       const left = rows.slice(at.size);
       if (left.length === 1) flow += rowHTML(left[0]);
       else if (left.length) {

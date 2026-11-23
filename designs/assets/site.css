@@ -130,6 +130,8 @@
   /* 图片区：一行行排，同一行按宽高比（--r）分宽度，所以整行等高 */
   .smedia { display: grid; gap: 3px; }
   .srow { display: flex; gap: 3px; }
+  /* 一行只有一张（比如竖图封面）时铺满整行宽度，不在两边留空 */
+  .srow > .shot:only-child { flex: 1 1 100%; width: 100%; }
   .shot { position: relative; display: block; flex: var(--r) 1 0; min-width: 0; aspect-ratio: var(--r); padding: 0; background: #000; overflow: hidden; cursor: zoom-in; }
   .shot img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform .5s cubic-bezier(.22, 1, .36, 1), opacity .3s; }
   .shot:hover img { transform: scale(1.04); }
@@ -179,6 +181,13 @@
   .rd-flow > p + p { margin-top: 1.25em; }
   /* 第一段当导语，稍大一点 */
   .rd-flow > p:first-child { font-size: 19px; line-height: 1.95; }
+  /* 正文里的标题："## " 是章节（上面一条细线隔开），"### " 是小节 */
+  .rd-flow > h2 { margin: 2.4em 0 1.1em; padding-top: 1.6em; border-top: 1px solid #2a2520; font-size: 25px; font-weight: 600; line-height: 1.45; letter-spacing: .03em; color: var(--ink); text-wrap: balance; }
+  .rd-flow > h3 { margin: 2.1em 0 .9em; padding-left: 12px; border-left: 2px solid var(--edge); font-size: 19px; font-weight: 600; line-height: 1.5; letter-spacing: .02em; color: var(--ink); text-wrap: balance; }
+  .rd-flow > h2 + h3 { margin-top: 1.4em; }
+  .rd-flow > :is(h2, h3):first-child { margin-top: 0; }
+  .rd-flow > h2:first-child { padding-top: 0; border-top: 0; }
+  .rd-row + :is(h2, h3) { margin-top: 1.6em; }
 
   /* 照片：每行和正文一样宽，同一行按宽高比分宽度、整行等高 */
   .rd-row { display: flex; gap: 6px; margin: 40px 0; }
@@ -380,6 +389,8 @@
     .rd-head h1 { font-size: 27px; }
     .rd-flow > p { font-size: 16px; line-height: 1.95; }
     .rd-flow > p:first-child { font-size: 17px; }
+    .rd-flow > h2 { font-size: 21px; }
+    .rd-flow > h3 { font-size: 17.5px; }
     .rd-row { gap: 4px; margin: 28px 0; }
     .rd-more { margin-top: 40px; }
     .rd-more .rd-row { margin-top: 4px; }
