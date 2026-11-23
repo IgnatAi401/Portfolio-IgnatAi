@@ -146,7 +146,11 @@
   .shot.playing .lbadge { color: var(--edge); }
   .sbody { position: relative; display: flex; flex-direction: column; padding: 14px 4px 0; }
   .sflag { position: absolute; right: 4px; top: 16px; font-size: 10.5px; color: var(--grease); border: 1px solid var(--grease); padding: 1px 6px; transform: rotate(3deg); }
-  .story h3 { font-size: 19px; font-weight: 500; line-height: 1.35; padding-right: 50px; }
+  .story h3 { font-size: 19px; font-weight: 500; line-height: 1.35; text-wrap: pretty; }
+  /* 只有带「占位」标签的卡片才给标签让位置 */
+  .sflag + h3 { padding-right: 50px; }
+  /* 标题按标点分段，换行优先落在「：」「，」之后，不把词拆开 */
+  .story h3 .tseg { display: inline-block; }
   /* 卡片上只是摘要：最多 6 行，点开卡片进阅读页看全文 */
   .story p { margin-top: 8px; font-size: 13px; line-height: 1.75; color: var(--ink-dim); white-space: pre-line; display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden; }
   .story.textonly .sbody { padding-top: 10px; }

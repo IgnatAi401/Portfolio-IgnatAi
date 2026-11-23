@@ -510,7 +510,7 @@
         ${mediaHTML(s)}
         <div class="sbody">
           ${s.placeholder ? `<span class="sflag">${t("占位")}</span>` : ""}
-          <h3><a href="#stories/${encodeURIComponent(s.id)}" class="slink">${esc(storyText(s, "title"))}</a></h3>
+          <h3><a href="#stories/${encodeURIComponent(s.id)}" class="slink">${storyText(s, "title").split(/(?<=[：，、；？！])/).map(x => `<span class="tseg">${esc(x)}</span>`).join("")}</a></h3>
           ${text ? `<p>${esc(text)}</p>` : ""}
           <div class="sfoot"><span>${s.media.length ? photoCount(s.media.length) : ""}</span><span class="smore" aria-hidden="true">${t("阅读全文")} →</span></div>
         </div>
