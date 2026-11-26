@@ -15,7 +15,7 @@
   const liveSrc = p => `photos/live/${p.live}`;
   const LIVE_BADGE = `<span class="lbadge" aria-hidden="true">LIVE</span>`;
   const TYPES = ["人文", "风景"];
-  const state = { country: null, city: null, type: "all", hot: null, view: "work" };
+  const state = { country: null, city: null, type: "all", pick: false, hot: null, view: "work" };
   // 「作品」和「故事」共用地图和国家/城市筛选，只换下面的主体；用网址 #stories 区分
   const storyMode = () => state.view === "stories";
 
@@ -31,6 +31,8 @@
   // 故事里的图只在这篇故事里翻
   const navList = p => p?.story ? p.story.media : p?.review ? PEND : litList();
   const storyOf = (country, city) => STORIES.filter(s => (!country || s.country === country) && (!city || s.city === city));
+  // 故事页当前筛选下的故事：选了「精选」就只算精选（pick: true）的
+  const storyIn = (country, city) => storyOf(country, city).filter(s => !state.pick || s.pick);
   const storyText = (s, k) => I18N.language === "en" && s[k + "En"] || s[k];
   const fmt = (lat, lon) => `${Math.abs(lat).toFixed(2)}°${lat >= 0 ? "N" : "S"}  ${Math.abs(lon).toFixed(2)}°${lon >= 0 ? "E" : "W"}`;
   const day = p => (p.taken || "").slice(0, 10);
@@ -248,21 +250,28 @@
   }
   function paintBar() {
     if (state.country && !COUNTRY_INFO.has(state.country)) state.country = state.city = null;
+    // 一篇精选都没有时，精选筛选项不显示，也不生效
+    const anyPick = STORIES.some(s => s.pick);
+    if (!anyPick) state.pick = false;
+    if (storyMode() && state.country && !storyIn(state.country).length) state.country = state.city = null;
     const c = COUNTRY_INFO.get(state.country);
-    if (state.city && !c?.items.some(p => p.city === state.city)) state.city = null;
+    if (state.city && !(storyMode() ? storyIn(state.country, state.city).length : c?.items.some(p => p.city === state.city))) state.city = null;
     LIT = null;
     // 作品页数照片（受类别筛选），故事页数故事
-    const count = (country, city) => storyMode() ? storyOf(country, city).length
+    const count = (country, city) => storyMode() ? storyIn(country, city).length
       : (country ? COUNTRY_INFO.get(country)?.items || [] : ORDER).filter(p => (!city || p.city === city) && (state.type === "all" || p.type === state.type)).length;
     $("rolls").querySelectorAll("button").forEach(b => {
       const all = b.dataset.all !== undefined, n = count(all ? null : b.dataset.country);
       b.setAttribute("aria-pressed", all ? !state.country : state.country === b.dataset.country);
       b.querySelector("small").textContent = n;
       b.classList.toggle("none", !n);
+      // 故事页：没有故事的国家直接不显示
+      b.hidden = storyMode() && !all && !n;
     });
     $("cityRow").hidden = !c;
     const cityHTML = c ? `<button data-city="" aria-pressed="${!state.city}">${t("全部城市")}<small>${count(c.name)}</small></button>` +
-      c.cities.filter(city => c.cityCounts.get(city) > 0).map(city => {
+      // 作品页列出有作品的城市；故事页列出有故事的城市（有的城市只有故事、没有作品）
+      c.cities.filter(city => storyMode() ? storyIn(c.name, city).length > 0 : c.cityCounts.get(city) > 0).map(city => {
         const n = count(c.name, city);
         return `<button data-city="${esc(city)}" aria-pressed="${state.city === city}"${n ? "" : ' class="none"'}>${esc(cityLabel(city, c.name))}<small>${n}</small></button>`;
       }).join("") : "";
@@ -276,8 +285,15 @@
     document.querySelectorAll("#toggle button").forEach(b => b.setAttribute("aria-pressed", b.dataset.type === state.type));
     const story = storyMode();
     $("typeLabel").hidden = $("toggle").hidden = story;
-    $("filterSummary").textContent = `${[state.country ? countryLabel(state.country) : t("全部国家"), cityLabel(state.city, state.country), !story && state.type !== "all" && t(state.type)].filter(Boolean).join(" · ")} · ${story ? t("storyCount", { count: count(state.country, state.city) }) : photoCount(litList().length)}`;
-    $("filterReset").disabled = !state.country && !state.city && (story || state.type === "all");
+    // 故事页：「全部故事 / 精选」两个筛选项，数字跟着国家、城市走
+    $("pickLabel").hidden = $("picks").hidden = !story || !anyPick;
+    if (story && anyPick) {
+      const all = storyOf(state.country, state.city);
+      $("picks").innerHTML = `<button data-pick="" aria-pressed="${!state.pick}">${t("全部故事")}<small>${all.length}</small></button>` +
+        `<button data-pick="1" aria-pressed="${state.pick}">${t("精选")}<small>${all.filter(s => s.pick).length}</small></button>`;
+    }
+    $("filterSummary").textContent = `${[state.country ? countryLabel(state.country) : t("全部国家"), cityLabel(state.city, state.country), !story && state.type !== "all" && t(state.type)].filter(Boolean).join(" · ")}${story && state.pick ? ` · ${t("精选")}` : ""} · ${story ? t("storyCount", { count: count(state.country, state.city) }) : photoCount(litList().length)}`;
+    $("filterReset").disabled = !state.country && !state.city && (story ? !state.pick : state.type === "all");
   }
   $("rolls").addEventListener("click", e => {
     const b = e.target.closest("button"); if (!b) return;
@@ -303,9 +319,14 @@
     state.type = b.dataset.type;
     applyFilter();
   });
+  $("picks").addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    state.pick = !!b.dataset.pick;
+    applyFilter();
+  });
   $("filterReset").addEventListener("click", () => {
     state.country = state.city = null;
-    if (!storyMode()) state.type = "all";
+    if (storyMode()) state.pick = false; else state.type = "all";
     hover(null);
     applyFilter();
     $("rolls").querySelector("[data-all]").focus({ preventScroll: true });
@@ -440,7 +461,7 @@
     if (b && !b.contains(e.relatedTarget)) stopLive(b);
   });
 
-  /* ———————— 故事：一篇一张卡片，按日期从新到旧，瀑布流排列 ———————— */
+  /* ———————— 故事：一篇一张卡片，按日期从旧到新，瀑布流排列（从上到下） ———————— */
   // 故事里的每张图都包成独立对象：可以引用作品照片（photo），也可以是故事自己的随手拍（src）。
   // 故事页只讲经过，不带拍摄参数，也不进作品、地图和筛选的计数。
   // raw 是 stories.json 里的原始数据，编辑模式改的是它，再只把改过的字段发给服务器；页面用的对象通过 raw 指回原数据
@@ -516,8 +537,8 @@
         </div>
       </article>`;
   }
-  // 按日期从新到旧
-  const storyList = () => storyOf(state.country, state.city).sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+  // 置顶（pinned: true）的排最前，其余按日期从旧到新（同一天的按 stories.json 里的顺序）
+  const storyList = () => storyIn(state.country, state.city).sort((a, b) => !!b.pinned - !!a.pinned || (a.date || "").localeCompare(b.date || ""));
   function renderStories() {
     sheetObserver?.disconnect();
     appendSheetBatch = null;
@@ -630,7 +651,11 @@
       let k = 0;
       flow = paras.map(x => x === "[图]" ? (rows[k] ? rowHTML(rows[k++]) : "") : paraHTML(x)).join("");
       const left = rows.slice(k);
-      if (left.length) more = `<section class="rd-more"><div class="rd-sec" aria-hidden="true"></div>${left.map(r => rowHTML(r)).join("")}</section>`;
+      // 正文最后一段就是 [图]：这一行和多出来的图紧挨着往下堆，不加分割线
+      if (left.length && paras.at(-1) === "[图]" && k) {
+        flow = flow.slice(0, flow.lastIndexOf(rowHTML(rows[k - 1])));
+        more = `<section class="rd-more rd-stack">${rows.slice(k - 1).map(r => rowHTML(r)).join("")}</section>`;
+      } else if (left.length) more = `<section class="rd-more"><div class="rd-sec" aria-hidden="true"></div>${left.map(r => rowHTML(r)).join("")}</section>`;
     } else {
       const gaps = Math.max(0, paras.length - 1);
       const stops = Math.min(rows.length, Math.ceil(gaps / 2));
@@ -656,7 +681,7 @@
       return `<button class="rd-go ${dir}" data-story="${esc(x.id)}">${c ? `<img src="${esc(thumbSrc(c))}" alt="" loading="lazy" decoding="async">` : ""}<span><small>${t(dir === "prev" ? "上一篇" : "下一篇")}</small><b>${esc(storyText(x, "title"))}</b><em>${esc((x.date || "").replaceAll("-", "."))}　${esc([countryLabel(x.country), cityLabel(x.city, x.country)].filter(Boolean).join(" · "))}</em></span></button>`;
     };
     const layIn = (k, ph) => `<label>${t(k === "layout" ? "阅读页每行几张" : "卡片每行几张")}<input class="rd-in rd-lay" data-lay="${k}" value="${esc((s.raw[k] || []).join(" "))}" placeholder="${t(ph)}" inputmode="numeric"></label>`;
-    const layHTML = ed ? `<div class="rd-lays">${layIn("layout", "自动")}${layIn("cardLayout", "同阅读页")}<small>${t("layHint", { count: n })}</small></div>` : "";
+    const layHTML = ed ? `<div class="rd-lays"><label class="rd-pick"><input type="checkbox" data-pick${s.pick ? " checked" : ""}>${t("精选故事")}</label>${layIn("layout", "自动")}${layIn("cardLayout", "同阅读页")}<small>${t("layHint", { count: n })}</small></div>` : "";
     return `
       <div class="rd-bar"><button class="rd-back" id="rdClose">← ${t("返回故事")}</button><span class="rd-where"><span>${esc(date)}　${esc(place)}</span><b>${esc(storyText(s, "title"))}</b></span><span class="rd-tools">${ed ? `<span class="ed-s${storyStatus.err ? " err" : ""}" id="rdStatus" role="status" title="${esc(storyStatus.msg)}">${esc(storyStatus.msg)}</span>` : ""}${canEdit ? `<button class="rd-edit" id="rdEdit" aria-pressed="${ed}">${t("编辑模式")}</button>` : ""}<span class="rd-esc">Esc</span></span><i class="rd-prog" aria-hidden="true"></i></div>
       <article class="rd-art${n ? "" : " textonly"}${ed ? " editing" : ""}">
@@ -765,7 +790,7 @@
   rd.addEventListener("input", e => {
     const el = e.target, s = rdStory;
     if (!s || !el.matches?.(".rd-in")) return;
-    if (el.dataset.lay) return;
+    if (el.dataset.lay || el.dataset.pick !== undefined) return;
     if (el.matches(".rd-seg")) {
       // 各段拼回正文，段与段之间放回 [图]；空段只留下 [图]
       const segs = [...rd.querySelectorAll(".rd-seg")].map(x => x.value.trim());
@@ -788,6 +813,17 @@
   });
 
   // 排版：写每行几张（如 1 3 2），留空回到自动；改完离开输入框或按回车就按新排版重画
+  // 精选：勾上写 pick: true，取消就删掉这个字段；回到故事页时筛选按新的来
+  rd.addEventListener("change", e => {
+    const el = e.target, s = rdStory;
+    if (!s || el.dataset?.pick === undefined) return;
+    if (el.checked) s.pick = s.raw.pick = true; else { delete s.pick; delete s.raw.pick; }
+    markStory(s, "pick");
+    storiesDirty = true;
+    scheduleStorySave();
+    sheetDirty = true;
+    paintBar();
+  });
   rd.addEventListener("change", e => {
     const el = e.target, s = rdStory, k = el.dataset?.lay;
     if (!s || !k) return;

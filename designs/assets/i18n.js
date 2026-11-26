@@ -13,6 +13,7 @@ const I18N = (() => {
     "国家": "Country", "城市": "City", "类别": "Category",
     "按国家筛选": "Filter by country", "按城市筛选": "Filter by city", "按类别筛选": "Filter by category",
     "全部国家": "All countries", "全部城市": "All cities", "全部类别": "All categories",
+    "全部故事": "All stories", "精选": "Featured", "精选故事": "Featured story", "按精选筛选": "Filter featured stories",
     "人文": "People & culture", "风景": "Landscape", "重置筛选": "Reset filters",
     "正在读取照片……": "Loading photographs…",
     "© Ignat · 所有照片由 Ignat 拍摄，未经允许禁止商用。": "© Ignat · All photographs by Ignat. Commercial use without permission is prohibited.",
