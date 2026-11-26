@@ -199,7 +199,17 @@
     mapCountries = [...svg.querySelectorAll(".ctry")];
     $("mapLoading").remove();
     paintMap();
+    centerMap();
   }
+
+  // 手机上地图比屏幕宽：滚到去过的国家中间
+  function centerMap() {
+    const pan = $("mapPan"), xs = [...GEO.values()].map(g => g.x).filter(x => x != null);
+    if (!xs.length || pan.scrollWidth <= pan.clientWidth) return;
+    const mid = (Math.min(...xs) + Math.max(...xs)) / 2 / W * pan.scrollWidth;
+    pan.scrollLeft = mid - pan.clientWidth / 2;
+  }
+  matchMedia("(max-width: 760px)").addEventListener("change", () => requestAnimationFrame(centerMap));
 
   function paintMap() {
     mapCountries.forEach(el => el.classList.toggle("hot", el.dataset.country === state.hot || el.dataset.country === state.country));
@@ -866,8 +876,8 @@
   // 切换「作品 / 故事」：只换主体、地图标题和导航高亮，筛选条件保留
   function setView(view) {
     state.view = view === "stories" ? "stories" : "work";
-    document.querySelectorAll(".top nav a[data-view]").forEach(a => a.dataset.view === state.view ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current"));
-    $("mapTitle").innerHTML = storyMode() ? "Roads<br>&amp; Stories" : "Places<br>&amp; Frames";
+    document.querySelectorAll(".view-tabs a[data-view]").forEach(a => a.dataset.view === state.view ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current"));
+    $("mapTitle").innerHTML = storyMode() ? "Roads <br>&amp; Stories" : "Places <br>&amp; Frames";
     $("mapSub").dataset.i18n = storyMode() ? "走过的路，留下的故事" : "走过的地方，拍下的底片";
     $("mapSub").textContent = t($("mapSub").dataset.i18n);
     if (!DB) return;

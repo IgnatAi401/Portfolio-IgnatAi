@@ -11,7 +11,7 @@ const I18N = (() => {
     "拍摄地点地图": "Map of photo locations", "底片上的世界": "The world on film",
     "正在冲洗地图……": "Developing the map…", "走过的地方，拍下的底片": "Places explored, moments on film",
     "国家": "Country", "城市": "City", "类别": "Category",
-    "按国家筛选": "Filter by country", "按城市筛选": "Filter by city", "按类别筛选": "Filter by category",
+    "按国家筛选": "Filter by country", "按城市筛选": "Filter by city", "按类别筛选": "Filter by category", "← 左右滑动看全图 →": "← Swipe to pan the map →", "作品 / 故事": "Work / Stories",
     "全部国家": "All countries", "全部城市": "All cities", "全部类别": "All categories",
     "全部故事": "All stories", "精选": "Featured", "精选故事": "Featured story", "按精选筛选": "Filter featured stories",
     "人文": "People & culture", "风景": "Landscape", "重置筛选": "Reset filters",

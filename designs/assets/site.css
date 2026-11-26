@@ -37,6 +37,8 @@
   .atlas .edge.top { top: 11px; } .atlas .edge.bot { bottom: 9px; }
   .atlas .edge .muted { color: var(--ink-dim); }
   .map { position: relative; }
+  .map-pan { position: relative; }
+  .map-hint { display: none; }
   .map canvas { display: block; width: 100%; height: auto; }
   .map svg { position: absolute; inset: 0 0 auto 0; width: 100%; height: auto; overflow: visible; }
   .map .loading { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--mono); font-size: 12px; color: var(--ink-dim); }
@@ -67,11 +69,16 @@
   .tip .go { font-size: 11px; color: var(--ink-dim); margin-top: 8px; }
 
   /* ———— 卷目录 + 筛选 ———— */
-  .bar { position: sticky; top: 0; z-index: 6; display: grid; gap: 10px; padding: 14px var(--gutter); margin-top: 28px; background: var(--desk); }
+  .bar { position: sticky; top: 0; z-index: 6; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 28px; padding: 14px var(--gutter); margin-top: 28px; background: var(--desk); border-bottom: 1px solid #26221d; }
+  .filter-main { min-width: 0; display: grid; gap: 10px; align-content: start; }
+  .filter-bottom:not(:has(> :not([hidden]))) { display: none; }
+  /* 右栏：上面切换作品/故事，下面是当前筛选结果，和左边筛选用一条竖线隔开 */
+  .bar-side { display: flex; flex-direction: column; justify-content: space-between; align-items: flex-end; gap: 10px; padding-left: 28px; border-left: 1px solid #2f2a24; }
+  .filter-status { display: flex; align-items: baseline; gap: 4px; white-space: nowrap; }
   .filter-row { display: flex; align-items: center; gap: 14px; min-width: 0; }
   .filter-row[hidden] { display: none; }
-  .filter-label { flex: 0 0 auto; font-size: 12px; color: var(--ink-dim); }
-  .filter-summary { margin-left: auto; font-size: 12px; color: var(--ink-dim); }
+  .filter-label { flex: 0 0 auto; align-self: flex-start; line-height: var(--chip-h, 33px); font-size: 12px; color: var(--ink-dim); }
+  .filter-summary { font-size: 12px; color: var(--ink-dim); }
   .filter-reset { flex: 0 0 auto; font-size: 12px; color: var(--edge); padding: 7px 0 7px 10px; }
   .filter-reset:disabled { color: var(--ink-dim); opacity: .45; cursor: default; }
   .rolls { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; flex: 1; }
@@ -368,20 +375,41 @@
   .vf.editing .zone.next { right: 360px; width: calc(30% - 108px); }
   .vf.editing .hint { display: none; }
 
+  @media (max-height: 520px) {
+    .bar { position: relative; }
+  }
   @media (max-width: 760px) {
     :root { --gutter: 16px; }
     .top nav { gap: 14px; }
-    .atlas { margin: 0; padding: 30px 10px 28px; }
-    .atlas .edge { left: 10px; right: 10px; font-size: 9px; }
+    /* 手机竖屏：地图放大到约两倍宽，可以左右滑，载入时对准去过的国家 */
+    .atlas { margin: 0; padding: 14px 0 26px; display: flex; flex-direction: column; }
+    .map { display: contents; }
+    .atlas .edge.bot { order: 1; }
+    .title { order: 2; }
+    .atlas .edge { position: static; padding: 0 var(--gutter); font-size: 9px; }
+    .atlas .edge.top { margin-bottom: 8px; }
+    .atlas .edge.bot { min-height: 12px; margin-top: 8px; }
     .atlas .edge .muted { display: none; }
-    .title { position: static; margin-top: 18px; padding: 0 6px; }
-    .title h1 { font-size: 44px; }
+    .map-hint { display: inline; margin-left: auto; color: var(--ink-dim); }
+    #edgeCoord:not(:empty) + .map-hint { display: none; }
+    .map-pan { overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scrollbar-width: none; -webkit-mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent); mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent); }
+    .map-pan::-webkit-scrollbar { display: none; }
+    .map .map-pan canvas, .map .map-pan svg { width: 200%; max-width: none; }
+    .title { position: static; margin-top: 22px; padding: 0 var(--gutter); }
+    .title h1 { font-size: min(72px, 14.4vw); white-space: nowrap; }
+    .title h1 br { display: none; }
+    .title p { margin-top: 10px; font-size: 13px; }
     .tip { display: none; }
-    .bar { position: relative; margin-top: 16px; }
-    .filter-row { align-items: baseline; gap: 10px; }
+    .bar { position: relative; margin-top: 16px; display: flex; flex-direction: column; gap: 12px; padding-top: 16px; padding-bottom: 12px; }
+    .bar-side { display: contents; }
+    .view-nav { order: -1; margin-bottom: 4px; }
+    .filter-status { justify-content: space-between; padding-top: 10px; border-top: 1px solid #26221d; }
+    .filter-row { align-items: center; gap: 10px; }
     .filter-bottom { flex-wrap: wrap; }
-    .filter-summary { margin-left: 0; flex: 1 1 60%; }
-    .rolls button { padding: 8px 10px; }
+    /* 手机上一行国家/城市横向滑动，不再折成好几行 */
+    .filter-main .rolls { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-right: calc(-1 * var(--gutter)); padding-right: var(--gutter); -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); mask-image: linear-gradient(90deg, #000 85%, transparent); }
+    .filter-main .rolls::-webkit-scrollbar { display: none; }
+    .rolls button { padding: 7px 10px; }
     .toggle button { padding: 8px 11px; }
     .sheet { margin: 12px 0 32px; padding: 18px 10px 14px; }
     .sheet-head .note { display: none; }
@@ -500,10 +528,8 @@ html[lang="en"] .title p { letter-spacing: .08em; }
 html[lang="en"] .filter-label { min-width: 58px; }
 .sheet-head h2 small { display: inline-block; line-height: 1.6; }
 @media (max-width: 760px) {
-  header.top { flex-wrap: wrap; gap: 14px; }
-  .top-actions { display: contents; }
-  header.top .lang-toggle { order: 1; }
-  header.top nav { order: 2; width: 100%; flex-wrap: wrap; }
+  header.top { gap: 12px; }
+  .top-actions { gap: 16px; }
   html[lang="en"] .filter-bottom .toggle { flex: 1 1 100%; }
   html[lang="en"] .toggle button { flex: 1; padding: 8px 6px; font-size: 12px; }
   .sheet-head h2 small { display: block; margin-left: 0; }
@@ -525,13 +551,14 @@ html[lang="en"] .filter-label { min-width: 58px; }
   background: rgba(12, 12, 13, 0.94);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045), 0 0 18px rgba(255, 181, 61, 0.08);
 }
-.top nav .view-tabs a {
+.view-tabs a {
+  text-decoration: none;
   position: relative;
   z-index: 1;
   display: grid;
   place-items: center;
   min-width: 64px;
-  height: 30px;
+  height: 28px;
   padding: 0 16px;
   border-radius: 999px;
   font-size: 14px;
@@ -540,8 +567,8 @@ html[lang="en"] .filter-label { min-width: 58px; }
   color: #a39a8d;
   transition: color 0.2s ease-out;
 }
-.top nav .view-tabs a:hover { color: var(--ink); }
-.top nav .view-tabs a[aria-current] { color: #fff6e6; text-shadow: 0 0 9px rgba(255, 200, 110, 0.55); }
+.view-tabs a:hover { color: var(--ink); }
+.view-tabs a[aria-current] { color: #fff6e6; text-shadow: 0 0 9px rgba(255, 200, 110, 0.55); }
 .view-thumb {
   position: absolute;
   top: 4px; bottom: 4px; left: 4px;
@@ -553,7 +580,8 @@ html[lang="en"] .filter-label { min-width: 58px; }
 }
 .view-tabs:has(a[data-view="stories"][aria-current]) .view-thumb { transform: translateX(100%); }
 @media (max-width: 760px) {
-  .top nav .view-tabs a { min-width: 56px; padding: 0 12px; }
+  .view-tabs { display: grid; }
+  .view-tabs a { height: 34px; font-size: 15px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .view-thumb { transition: none !important; }
